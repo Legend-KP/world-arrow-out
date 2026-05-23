@@ -7,6 +7,8 @@
     "license": "MIT",
     "scripts": {
         "build:cloudflare": "pnpm --filter @examples/react-app exec opennextjs-cloudflare build",
+        "deploy:only": "pnpm --filter @examples/react-app exec opennextjs-cloudflare deploy",
+        "upload:only": "pnpm --filter @examples/react-app exec opennextjs-cloudflare upload",
         "preview:cloudflare": "pnpm --filter @examples/react-app preview",
         "deploy:cloudflare": "pnpm --filter @examples/react-app deploy",
         "upload:cloudflare": "pnpm --filter @examples/react-app upload",

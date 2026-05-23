@@ -2,6 +2,7 @@
 # These mirror server-side secrets from .env — do not commit .dev.vars.
 
 NEXTJS_ENV=development
+NEXT_PRIVATE_MINIMAL_MODE=1
 
 # WalletConnect Cloud project ID (also set NEXT_PUBLIC_WC_PROJECT_ID in .env)
 WC_PROJECT_ID=

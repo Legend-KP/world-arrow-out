@@ -8,6 +8,9 @@
         "global_fetch_strictly_public"
     ],
     "keep_vars": true,
+    "vars": {
+        "NEXT_PRIVATE_MINIMAL_MODE": "1"
+    },
     "assets": {
         "directory": ".open-next/assets",
         "binding": "ASSETS"

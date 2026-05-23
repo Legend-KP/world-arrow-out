@@ -1,6 +1,9 @@
 node_modules
 .env
 packages/*/.env
+packages/*/.dev.vars
+packages/*/.open-next
+packages/*/.wrangler
 
 # IntelliJ project files
 *.iml

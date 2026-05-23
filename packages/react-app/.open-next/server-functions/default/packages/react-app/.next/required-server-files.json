@@ -49,9 +49,7 @@
       "path": "/_next/image",
       "loader": "default",
       "loaderFile": "",
-      "domains": [
-        "cdn-production-opera-website.operacdn.com"
-      ],
+      "domains": [],
       "disableStaticImages": false,
       "minimumCacheTTL": 60,
       "formats": [
@@ -61,7 +59,12 @@
       "dangerouslyAllowSVG": false,
       "contentSecurityPolicy": "script-src 'none'; frame-src 'none'; sandbox;",
       "contentDispositionType": "attachment",
-      "remotePatterns": [],
+      "remotePatterns": [
+        {
+          "protocol": "https",
+          "hostname": "cdn-production-opera-website.operacdn.com"
+        }
+      ],
       "unoptimized": false
     },
     "devIndicators": {
@@ -101,7 +104,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "E:\\kushal paliwal\\Coding\\Celo-Sand-Drop-main",
+    "outputFileTracingRoot": "E:\\kushal paliwal\\Coding\\world-arrow-out",
     "experimental": {
       "useSkewCookie": false,
       "cacheLife": {
@@ -296,10 +299,10 @@
       "jose"
     ],
     "turbopack": {
-      "root": "E:\\kushal paliwal\\Coding\\Celo-Sand-Drop-main"
+      "root": "E:\\kushal paliwal\\Coding\\world-arrow-out"
     }
   },
-  "appDir": "E:\\kushal paliwal\\Coding\\Celo-Sand-Drop-main\\packages\\react-app",
+  "appDir": "E:\\kushal paliwal\\Coding\\world-arrow-out\\packages\\react-app",
   "relativeAppDir": "packages\\react-app",
   "files": [
     ".next\\routes-manifest.json",

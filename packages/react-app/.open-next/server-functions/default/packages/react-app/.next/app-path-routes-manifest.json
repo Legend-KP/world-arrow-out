@@ -1,12 +1,9 @@
 {
-  "/api/addChance/route": "/api/addChance",
-  "/api/addChances/route": "/api/addChances",
-  "/api/getLeaderboard/route": "/api/getLeaderboard",
-  "/api/initUser/route": "/api/initUser",
-  "/api/getUser/route": "/api/getUser",
-  "/api/saveScore/route": "/api/saveScore",
-  "/api/updateUsername/route": "/api/updateUsername",
-  "/api/useChance/route": "/api/useChance",
   "/_not-found/page": "/_not-found",
+  "/api/bootstrap/route": "/api/bootstrap",
+  "/api/challenge/route": "/api/challenge",
+  "/api/leaderboard/route": "/api/leaderboard",
+  "/api/purchase/route": "/api/purchase",
+  "/api/sync/route": "/api/sync",
   "/page": "/"
 }

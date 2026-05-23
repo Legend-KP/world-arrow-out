@@ -1,9 +1,9 @@
 globalThis.openNextDebug = false;globalThis.openNextVersion = "3.10.4";globalThis.nextVersion = "15.5.15";
 
-// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_1fecb2bc6cd2596959fb80f0ec990392/node_modules/@opennextjs/cloudflare/dist/api/durable-objects/bucket-cache-purge.js
+// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_80efe36b98dd9ce71d5b4e9dce2fd409/node_modules/@opennextjs/cloudflare/dist/api/durable-objects/bucket-cache-purge.js
 import { DurableObject } from "cloudflare:workers";
 
-// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_974ae532082f1f47162b03e2020ca58f/node_modules/@opennextjs/aws/dist/utils/error.js
+// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_02c04965a5eb6c4ae2e15032e311b61e/node_modules/@opennextjs/aws/dist/utils/error.js
 function isOpenNextError(e) {
   try {
     return "__openNextInternal" in e;
@@ -12,7 +12,7 @@ function isOpenNextError(e) {
   }
 }
 
-// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_974ae532082f1f47162b03e2020ca58f/node_modules/@opennextjs/aws/dist/adapters/logger.js
+// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_02c04965a5eb6c4ae2e15032e311b61e/node_modules/@opennextjs/aws/dist/adapters/logger.js
 function debug(...args) {
   if (globalThis.openNextDebug) {
     console.log(...args);
@@ -62,10 +62,10 @@ function getOpenNextErrorLogLevel() {
   }
 }
 
-// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_1fecb2bc6cd2596959fb80f0ec990392/node_modules/@opennextjs/cloudflare/dist/api/cloudflare-context.js
+// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_80efe36b98dd9ce71d5b4e9dce2fd409/node_modules/@opennextjs/cloudflare/dist/api/cloudflare-context.js
 var cloudflareContextSymbol = Symbol.for("__cloudflare-context__");
 
-// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_1fecb2bc6cd2596959fb80f0ec990392/node_modules/@opennextjs/cloudflare/dist/api/overrides/internal.js
+// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_80efe36b98dd9ce71d5b4e9dce2fd409/node_modules/@opennextjs/cloudflare/dist/api/overrides/internal.js
 var debugCache = (name, ...args) => {
   if (process.env.NEXT_PRIVATE_DEBUG_CACHE) {
     console.log(`[${name}] `, ...args);
@@ -110,7 +110,7 @@ async function internalPurgeCacheByTags(env, tags) {
   }
 }
 
-// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_1fecb2bc6cd2596959fb80f0ec990392/node_modules/@opennextjs/cloudflare/dist/api/durable-objects/bucket-cache-purge.js
+// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_80efe36b98dd9ce71d5b4e9dce2fd409/node_modules/@opennextjs/cloudflare/dist/api/durable-objects/bucket-cache-purge.js
 var DEFAULT_BUFFER_TIME_IN_SECONDS = 5;
 var MAX_NUMBER_OF_TAGS_PER_PURGE = 100;
 var BucketCachePurge = class extends DurableObject {

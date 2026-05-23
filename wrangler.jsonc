@@ -1,7 +1,9 @@
+// Root pointer for Cloudflare CI when the project root is the monorepo.
+// Prefer setting the Workers build root directory to packages/react-app instead.
 {
     "$schema": "node_modules/wrangler/config-schema.json",
     "name": "world-arrow-out",
-    "main": ".open-next/worker.js",
+    "main": "packages/react-app/.open-next/worker.js",
     "compatibility_date": "2024-12-30",
     "compatibility_flags": [
         "nodejs_compat",
@@ -9,7 +11,7 @@
     ],
     "keep_vars": true,
     "assets": {
-        "directory": ".open-next/assets",
+        "directory": "packages/react-app/.open-next/assets",
         "binding": "ASSETS"
     },
     "services": [

@@ -1,8 +1,24 @@
-﻿"use client" 
+﻿"use client"
+
 import dynamic from "next/dynamic";
 
-const GameClient = dynamic(() => import("@/components/GameClient"), { ssr: false });
+const ClientProviders = dynamic(
+    () =>
+        import("@/providers/ClientProviders").then(
+            (mod) => mod.ClientProviders
+        ),
+    { ssr: false }
+);
+
+const GameClient = dynamic(
+    () => import("@/components/GameClient"),
+    { ssr: false }
+);
 
 export default function Page() {
-    return <GameClient />;
+    return (
+        <ClientProviders>
+            <GameClient />
+        </ClientProviders>
+    );
 }

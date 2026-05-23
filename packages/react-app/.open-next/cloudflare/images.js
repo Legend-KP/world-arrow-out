@@ -14,9 +14,9 @@ var define_IMAGES_LOCAL_PATTERNS_default = [{ pathname: "^(?:\\/(?!\\.{1,2}(?:\\
 var define_IMAGES_QUALITIES_default = [75];
 
 // <define:__IMAGES_REMOTE_PATTERNS__>
-var define_IMAGES_REMOTE_PATTERNS_default = [];
+var define_IMAGES_REMOTE_PATTERNS_default = [{ protocol: "https", hostname: "^(?:^(?:cdn\\-production\\-opera\\-website\\.operacdn\\.com)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }];
 
-// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_974ae532082f1f47162b03e2020ca58f/node_modules/@opennextjs/aws/dist/utils/error.js
+// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_02c04965a5eb6c4ae2e15032e311b61e/node_modules/@opennextjs/aws/dist/utils/error.js
 function isOpenNextError(e) {
   try {
     return "__openNextInternal" in e;
@@ -25,7 +25,7 @@ function isOpenNextError(e) {
   }
 }
 
-// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_974ae532082f1f47162b03e2020ca58f/node_modules/@opennextjs/aws/dist/adapters/logger.js
+// ../../node_modules/.pnpm/@opennextjs+aws@3.10.4_next_02c04965a5eb6c4ae2e15032e311b61e/node_modules/@opennextjs/aws/dist/adapters/logger.js
 function debug(...args) {
   if (globalThis.openNextDebug) {
     console.log(...args);
@@ -75,7 +75,7 @@ function getOpenNextErrorLogLevel() {
   }
 }
 
-// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_1fecb2bc6cd2596959fb80f0ec990392/node_modules/@opennextjs/cloudflare/dist/cli/templates/images.js
+// ../../node_modules/.pnpm/@opennextjs+cloudflare@1.19_80efe36b98dd9ce71d5b4e9dce2fd409/node_modules/@opennextjs/cloudflare/dist/cli/templates/images.js
 async function handleImageRequest(requestURL, requestHeaders, env) {
   const parseResult = parseImageRequest(requestURL, requestHeaders);
   if (!parseResult.ok) {

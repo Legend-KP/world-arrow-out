@@ -9,8 +9,18 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: ['cdn-production-opera-website.operacdn.com'],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn-production-opera-website.operacdn.com",
+      },
+    ],
   },
 };
 
 module.exports = nextConfig;
+
+if (process.env.NODE_ENV === "development") {
+  const { initOpenNextCloudflareForDev } = require("@opennextjs/cloudflare");
+  initOpenNextCloudflareForDev();
+}

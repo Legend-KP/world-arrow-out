@@ -6,7 +6,11 @@
     "author": "Celo",
     "license": "MIT",
     "scripts": {
-        "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+        "build:cloudflare": "pnpm --filter @examples/react-app exec opennextjs-cloudflare build",
+        "preview:cloudflare": "pnpm --filter @examples/react-app preview",
+        "deploy:cloudflare": "pnpm --filter @examples/react-app deploy",
+        "upload:cloudflare": "pnpm --filter @examples/react-app upload",
+        "deploy": "pnpm run deploy:cloudflare"
     },
     "repository": {
         "type": "git",
@@ -41,11 +45,14 @@
         "@opennextjs/cloudflare": "^1.19.3",
         "@types/node": "^22.19.17",
         "eslint": "^9.39.4",
-        "typescript": "^6.0.3"
+        "typescript": "^6.0.3",
+        "wrangler": "^4.84.1"
     },
     "pnpm": {
         "overrides": {
-            "jose": "^5.9.6"
+            "jose": "^5.9.6",
+            "react": "18.3.1",
+            "react-dom": "18.3.1"
         }
     }
 }

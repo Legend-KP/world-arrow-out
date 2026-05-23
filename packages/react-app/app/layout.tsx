@@ -1,5 +1,6 @@
 import '@/styles/globals.css'
-import { AppProvider } from '@/providers/AppProvider'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
     other: {
@@ -22,9 +23,7 @@ export default function RootLayout({
                 height: "100vh",
                 width: "100vw"
             }}>
-                <AppProvider>
-                    {children}
-                </AppProvider>
+                {children}
             </body>
         </html>
     )

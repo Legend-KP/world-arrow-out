@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import '@rainbow-me/rainbowkit/styles.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,8 +11,12 @@ import {
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { celo, celoAlfajores } from 'wagmi/chains';
 
-
 import { injectedWallet } from '@rainbow-me/rainbowkit/wallets';
+
+const walletConnectProjectId =
+  process.env.NEXT_PUBLIC_WC_PROJECT_ID ??
+  process.env.WC_PROJECT_ID ??
+  '044601f65212332475a09bc14ceb3c34';
 
 const connectors = connectorsForWallets(
   [
@@ -22,7 +27,7 @@ const connectors = connectorsForWallets(
   ],
   {
     appName: 'Celo Composer',
-    projectId: process.env.WC_PROJECT_ID ?? '044601f65212332475a09bc14ceb3c34',
+    projectId: walletConnectProjectId,
   }
 );
 
@@ -37,14 +42,18 @@ const config = createConfig({
 
 const queryClient = new QueryClient();
 
+const Web3Provider = WagmiProvider as React.ComponentType<
+  React.PropsWithChildren<{ config: typeof config }>
+>;
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
+    <Web3Provider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </Web3Provider>
   );
 }

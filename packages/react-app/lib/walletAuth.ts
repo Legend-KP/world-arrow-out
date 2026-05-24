@@ -1,6 +1,10 @@
 import { MiniKit } from "@worldcoin/minikit-js"
 
 import { apiPost } from "@/lib/api"
+import {
+    ensureMiniKitInstalled,
+    getMiniKitUnavailableMessage
+} from "@/lib/minikitClient"
 
 let cachedWallet: string | null = null
 
@@ -19,9 +23,9 @@ export function setCachedWallet(
 }
 
 export async function authenticateWallet(): Promise<string> {
-    if (!MiniKit.isInstalled()) {
+    if (!ensureMiniKitInstalled()) {
         throw new Error(
-            "Please open this app inside World App"
+            getMiniKitUnavailableMessage()
         )
     }
 

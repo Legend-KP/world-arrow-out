@@ -1,4 +1,24 @@
 /** @type {import('next').NextConfig} */
+const path = require("path");
+const dotenv = require("dotenv");
+
+dotenv.config({ path: path.join(__dirname, "../../.env") });
+dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, ".env.local") });
+
+if (!process.env.NEXT_PUBLIC_APP_ID) {
+  process.env.NEXT_PUBLIC_APP_ID =
+    process.env.WORLD_APP_ID ||
+    process.env.APP_ID ||
+    "";
+}
+
+if (!process.env.NEXT_PUBLIC_WORLD_RECEIVING_WALLET) {
+  process.env.NEXT_PUBLIC_WORLD_RECEIVING_WALLET =
+    process.env.WORLD_RECEIVING_WALLET ||
+    "";
+}
+
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"],

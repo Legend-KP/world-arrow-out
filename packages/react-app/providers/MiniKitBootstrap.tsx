@@ -1,16 +1,14 @@
 "use client"
 
 import { useEffect } from "react"
-import { MiniKit } from "@worldcoin/minikit-js"
+
+import {
+    ensureMiniKitInstalled
+} from "@/lib/minikitClient"
 
 export function MiniKitBootstrap() {
     useEffect(() => {
-        const appId =
-            process.env.NEXT_PUBLIC_APP_ID
-
-        if (appId) {
-            MiniKit.install(appId)
-        }
+        ensureMiniKitInstalled()
     }, [])
 
     return null

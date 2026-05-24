@@ -2,13 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-const ClientProviders = dynamic(
-    () =>
-        import("@/providers/ClientProviders").then(
-            (mod) => mod.ClientProviders
-        ),
-    { ssr: false }
-);
+import { ClientProviders } from "@/providers/ClientProviders";
 
 const GameClient = dynamic(
     () => import("@/components/GameClient"),

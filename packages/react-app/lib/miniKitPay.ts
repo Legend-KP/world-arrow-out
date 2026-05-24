@@ -5,6 +5,10 @@ import {
 } from "@worldcoin/minikit-js/commands"
 
 import { apiPost } from "@/lib/api"
+import {
+    ensureMiniKitInstalled,
+    getMiniKitUnavailableMessage
+} from "@/lib/minikitClient"
 
 function normalizePayError(
     error: unknown
@@ -46,9 +50,9 @@ export async function miniKitPay(
     amount: string,
     description: string
 ): Promise<string> {
-    if (!MiniKit.isInstalled()) {
+    if (!ensureMiniKitInstalled()) {
         throw new Error(
-            "Please open this app inside World App"
+            getMiniKitUnavailableMessage()
         )
     }
 

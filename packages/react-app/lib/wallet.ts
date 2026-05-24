@@ -1,11 +1,12 @@
 import type { Address } from "viem"
-import { MiniKit } from "@worldcoin/minikit-js"
 
 import {
     authenticateWallet,
     getCachedWallet
 } from "@/lib/walletAuth"
-
+import {
+    ensureMiniKitInstalled
+} from "@/lib/minikitClient"
 export async function getWallet(): Promise<Address> {
     const cached =
         getCachedWallet()
@@ -19,7 +20,7 @@ export async function getWallet(): Promise<Address> {
 
 export async function getWalletSafe(): Promise<Address | null> {
     try {
-        if (!MiniKit.isInstalled()) {
+        if (!ensureMiniKitInstalled()) {
             return null
         }
 

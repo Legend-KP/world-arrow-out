@@ -13,6 +13,11 @@ import {
 } from "./walletAddress"
 
 import {
+    readHasPurchasedGame,
+    readTutorialCompleted
+} from "./unitySnapshot"
+
+import {
     readDb,
     writeDb,
     deleteDb
@@ -78,15 +83,15 @@ function mergeStoredUserRecords(
             secondary.username.trim()) ||
             "Player",
         hasPurchasedGame:
-            !!primary.hasPurchasedGame ||
-            !!secondary.hasPurchasedGame,
+            readHasPurchasedGame(primary) ||
+            readHasPurchasedGame(secondary),
         hints: Math.max(
             Number(primary.hints ?? 0),
             Number(secondary.hints ?? 0)
         ),
         tutorialCompleted:
-            !!primary.tutorialCompleted ||
-            !!secondary.tutorialCompleted,
+            readTutorialCompleted(primary) ||
+            readTutorialCompleted(secondary),
         classic: {
             level: Math.max(
                 Number(
@@ -202,7 +207,7 @@ export function mergeSnapshot(
                 ? raw.username.trim()
                 : base.username,
         hasPurchasedGame:
-            !!raw?.hasPurchasedGame,
+            readHasPurchasedGame(raw),
         hints:
             Math.max(
                 0,
@@ -212,7 +217,7 @@ export function mergeSnapshot(
                 )
             ),
         tutorialCompleted:
-            !!raw?.tutorialCompleted,
+            readTutorialCompleted(raw),
         classic: {
             level:
                 Math.max(
@@ -257,6 +262,109 @@ export function mergeSnapshot(
                 )
         },
         universal
+    }
+}
+
+async function readMergedStoredUserRecord(
+    wallet: string
+) {
+    const dbKeys =
+        getLegacyWalletDbKeys(wallet)
+
+    let mergedRaw:
+        | Record<string, unknown>
+        | null = null
+
+    for (const key of dbKeys) {
+        const raw =
+            await readDb<
+                Record<string, unknown>
+            >(`users/${key}`)
+
+        if (!raw) {
+            continue
+        }
+
+        mergedRaw = mergedRaw
+            ? mergeStoredUserRecords(
+                mergedRaw,
+                raw
+            )
+            : raw
+    }
+
+    return mergedRaw
+}
+
+function mergeBestTimeSeconds(
+    incoming: number,
+    stored: number
+) {
+    if (incoming < 0) {
+        return stored
+    }
+
+    if (stored < 0) {
+        return incoming
+    }
+
+    return Math.min(incoming, stored)
+}
+
+function mergeIncomingSnapshotWithStored(
+    incoming: UserSnapshot,
+    stored: UserSnapshot | null
+): UserSnapshot {
+    if (!stored) {
+        return incoming
+    }
+
+    return {
+        ...incoming,
+        hasPurchasedGame:
+            incoming.hasPurchasedGame ||
+            stored.hasPurchasedGame,
+        tutorialCompleted:
+            incoming.tutorialCompleted ||
+            stored.tutorialCompleted,
+        hints: Math.max(
+            incoming.hints,
+            stored.hints
+        ),
+        classic: {
+            level: Math.max(
+                incoming.classic.level,
+                stored.classic.level
+            )
+        },
+        challenge: {
+            chances: Math.max(
+                incoming.challenge.chances,
+                stored.challenge.chances
+            ),
+            lastResetUnixMilliseconds:
+                Math.max(
+                    incoming.challenge
+                        .lastResetUnixMilliseconds,
+                    stored.challenge
+                        .lastResetUnixMilliseconds
+                ),
+            streakCycleIndex: Math.max(
+                incoming.challenge.streakCycleIndex,
+                stored.challenge.streakCycleIndex
+            ),
+            streakMask: Math.max(
+                incoming.challenge.streakMask,
+                stored.challenge.streakMask
+            ),
+            bestTimeSeconds:
+                mergeBestTimeSeconds(
+                    incoming.challenge
+                        .bestTimeSeconds,
+                    stored.challenge
+                        .bestTimeSeconds
+                )
+        }
     }
 }
 
@@ -412,14 +520,24 @@ export function sanitizeSnapshot(
         username:
             snapshot.username || "Player",
         hasPurchasedGame:
-            !!snapshot.hasPurchasedGame,
+            readHasPurchasedGame(
+                snapshot as unknown as Record<
+                    string,
+                    unknown
+                >
+            ),
         hints:
             Math.max(
                 0,
                 Number(snapshot.hints || 0)
             ),
         tutorialCompleted:
-            !!snapshot.tutorialCompleted,
+            readTutorialCompleted(
+                snapshot as unknown as Record<
+                    string,
+                    unknown
+                >
+            ),
         classic: {
             level: Math.max(
                 1,
@@ -481,10 +599,26 @@ export async function syncUserSnapshot(
     const universal =
         await getUniversalSnapshot()
 
-    const mergedSnapshot = {
-        ...cleanSnapshot,
-        universal
-    }
+    const storedRaw =
+        await readMergedStoredUserRecord(
+            cleanSnapshot.walletAddress
+        )
+
+    const storedSnapshot = storedRaw
+        ? mergeSnapshot(
+            cleanSnapshot.walletAddress,
+            storedRaw,
+            universal
+        )
+        : null
+
+    const mergedSnapshot = mergeIncomingSnapshotWithStored(
+        {
+            ...cleanSnapshot,
+            universal
+        },
+        storedSnapshot
+    )
 
     await writeDb(
         `users/${mergedSnapshot.walletAddress}`,

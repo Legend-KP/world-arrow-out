@@ -6,10 +6,6 @@ import {
 } from "react"
 
 import {
-    getWalletSafe
-} from "@/lib/wallet"
-
-import {
     authenticateWallet
 } from "@/lib/walletAuth"
 
@@ -24,6 +20,11 @@ import {
 import {
     runWorldPayment
 } from "@/lib/worldPay"
+
+import {
+    formatSnapshotForUnity,
+    normalizeIncomingSnapshot
+} from "@/lib/unitySnapshot"
 
 declare global {
     interface Window {
@@ -40,50 +41,6 @@ export default function GameClient() {
             return
 
         initialized.current = true
-
-        async function preload() {
-            try {
-                let wallet: string | null =
-                    (await getWalletSafe()) as
-                        | string
-                        | null
-
-                if (!wallet) {
-                    await new Promise((resolve) =>
-                        setTimeout(resolve, 1500)
-                    )
-
-                    try {
-                        wallet =
-                            await authenticateWallet()
-                    } catch (authError) {
-                        console.log(
-                            "Auth not available:",
-                            authError
-                        )
-
-                        return
-                    }
-                }
-
-                if (!wallet) {
-                    console.log(
-                        "Wallet not connected yet"
-                    )
-
-                    return
-                }
-
-                await bootstrap(wallet)
-            } catch (error) {
-                console.error(
-                    "Preload failed",
-                    error
-                )
-            }
-        }
-
-        preload()
 
         async function handleMessage(
             event: MessageEvent
@@ -189,7 +146,9 @@ export default function GameClient() {
 
         sendToUnity(
             "OnBootstrapDataReceived",
-            response.snapshot
+            formatSnapshotForUnity(
+                response.snapshot
+            )
         )
     }
 
@@ -259,11 +218,17 @@ export default function GameClient() {
     async function handleSync(
         snapshot: any
     ) {
+        const normalizedSnapshot =
+            normalizeIncomingSnapshot(
+                snapshot
+            )
+
         const response =
             await apiPost(
                 "/api/sync",
                 {
-                    snapshot
+                    snapshot:
+                        normalizedSnapshot
                 }
             )
 
@@ -275,7 +240,9 @@ export default function GameClient() {
 
         sendToUnity(
             "OnUserStateSynced",
-            response.snapshot
+            formatSnapshotForUnity(
+                response.snapshot
+            )
         )
     }
 
@@ -304,7 +271,11 @@ export default function GameClient() {
 
                 sendToUnity(
                     "OnGamePurchaseSuccess",
-                    response.result?.snapshot || ""
+                    response.result?.snapshot
+                        ? formatSnapshotForUnity(
+                            response.result.snapshot
+                        )
+                        : ""
                 )
             } catch (error: any) {
                 console.error(
@@ -381,7 +352,11 @@ export default function GameClient() {
 
             sendToUnity(
                 "OnHintPurchaseSuccess",
-                response.result?.snapshot || ""
+                response.result?.snapshot
+                    ? formatSnapshotForUnity(
+                        response.result.snapshot
+                    )
+                    : ""
             )
         } catch (error: any) {
             sendToUnity(
@@ -422,7 +397,11 @@ export default function GameClient() {
             }
 
             const snapshotPayload =
-                response.result?.snapshot || ""
+                response.result?.snapshot
+                    ? formatSnapshotForUnity(
+                        response.result.snapshot
+                    )
+                    : ""
 
             sendToUnity(
                 "OnRevivePurchaseSuccess",

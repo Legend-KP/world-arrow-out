@@ -25,9 +25,13 @@
 
 // Required Cloudflare secrets (Dashboard → Workers → Settings → Variables):
 //   FIREBASE_DATABASE_SECRET   — Realtime Database secret from Firebase Console
+//   DEV_PORTAL_API_KEY         — World Developer Portal API key (Pay verification)
 //   WORLD_RECEIVING_WALLET     — optional runtime override for payments
 //
 // Build-time env (must be present when running deploy / opennext build):
 //   NEXT_PUBLIC_APP_ID
 //   NEXT_PUBLIC_WORLD_RECEIVING_WALLET
 //   NEXT_PUBLIC_FIREBASE_DATABASE_URL
+//
+// Pay uses MiniKit.pay (Tokens.USDC) — no USDC contract address in client code.
+// Whitelist receiving wallet under Developer Portal → Payments.

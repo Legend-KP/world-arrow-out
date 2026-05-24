@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
-import { isAddress } from "viem"
 import type { PayResult } from "@worldcoin/minikit-js/commands"
 
-import { getReceivingWalletAddress } from "@/lib/receivingWalletAddress"
+import { verifyPayment } from "@/lib/paymentVerify"
 
 export async function POST(
     request: Request
@@ -31,91 +30,17 @@ export async function POST(
             )
         }
 
-        if (
-            !payload ||
-            typeof payload !== "object"
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Payment payload missing"
-                },
-                {
-                    status: 400
-                }
+        const result =
+            await verifyPayment(
+                reference,
+                payload
             )
-        }
 
-        if (
-            payload.reference !==
-            reference
-        ) {
+        if (!result.ok) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Reference mismatch"
-                },
-                {
-                    status: 400
-                }
-            )
-        }
-
-        if (!payload.transactionId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Transaction ID missing"
-                },
-                {
-                    status: 400
-                }
-            )
-        }
-
-        if (
-            payload.chain !==
-            "worldchain"
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Invalid chain"
-                },
-                {
-                    status: 400
-                }
-            )
-        }
-
-        if (
-            !payload.from ||
-            !isAddress(payload.from)
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Invalid payer address"
-                },
-                {
-                    status: 400
-                }
-            )
-        }
-
-        const receivingWallet =
-            getReceivingWalletAddress()
-
-        if (
-            "to" in payload &&
-            typeof payload.to === "string" &&
-            payload.to.toLowerCase() !==
-            receivingWallet.toLowerCase()
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Invalid receiver"
+                    error: result.error
                 },
                 {
                     status: 400
@@ -124,7 +49,10 @@ export async function POST(
         }
 
         return NextResponse.json({
-            success: true
+            success: true,
+            from: result.from,
+            verifiedBy:
+                result.verifiedBy
         })
     } catch (error: any) {
         console.error(

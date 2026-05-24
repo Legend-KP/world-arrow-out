@@ -43,12 +43,26 @@ export async function POST(
         const verification =
             await verifySiweMessage(
                 payload,
-                nonce
+                nonce,
+                "Sign in to Arrow Out"
             )
 
+        if (!verification.isValid) {
+            return NextResponse.json(
+                {
+                    isValid: false,
+                    error: "Invalid wallet signature"
+                },
+                {
+                    status: 400
+                }
+            )
+        }
+
+        cookieStore.delete("siwe")
+
         return NextResponse.json({
-            isValid:
-                verification.isValid,
+            isValid: true,
             address:
                 verification.siweMessageData
                     .address

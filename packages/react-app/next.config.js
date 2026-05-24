@@ -19,6 +19,19 @@ if (!process.env.NEXT_PUBLIC_WORLD_RECEIVING_WALLET) {
     "";
 }
 
+if (!process.env.APP_ID) {
+  process.env.APP_ID =
+    process.env.NEXT_PUBLIC_APP_ID ||
+    process.env.WORLD_APP_ID ||
+    "";
+}
+
+if (!process.env.DEV_PORTAL_API_KEY) {
+  process.env.DEV_PORTAL_API_KEY =
+    process.env.WORLD_API_KEY ||
+    "";
+}
+
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"],

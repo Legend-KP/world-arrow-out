@@ -2,6 +2,7 @@ import { MiniKit } from "@worldcoin/minikit-js"
 
 import { apiPost } from "@/lib/api"
 import { normalizeWalletAuthError } from "@/lib/minikitErrors"
+import { normalizeWalletAddress } from "@/lib/walletAddress"
 import {
     ensureMiniKitInstalledAsync,
     getMiniKitUnavailableMessageAsync
@@ -13,11 +14,22 @@ const WALLET_AUTH_STATEMENT =
 let cachedWallet: string | null = null
 
 export function getCachedWallet(): string | null {
-    return (
+    const raw =
         cachedWallet ||
         MiniKit.user?.walletAddress ||
         null
-    )
+
+    if (!raw) {
+        return null
+    }
+
+    try {
+        return normalizeWalletAddress(
+            raw
+        )
+    } catch {
+        return raw
+    }
 }
 
 export function setCachedWallet(
@@ -98,11 +110,14 @@ export async function authenticateWallet(): Promise<string> {
             )
         }
 
-        setCachedWallet(
-            response.address
-        )
+        const address =
+            normalizeWalletAddress(
+                response.address
+            )
 
-        return response.address
+        setCachedWallet(address)
+
+        return address
     } catch (error) {
         throw new Error(
             normalizeWalletAuthError(error)

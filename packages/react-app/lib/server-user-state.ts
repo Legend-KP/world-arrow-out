@@ -8,6 +8,11 @@ import type {
 } from "./types"
 
 import {
+    getLegacyWalletDbKeys,
+    normalizeWalletAddress
+} from "./walletAddress"
+
+import {
     readDb,
     writeDb,
     deleteDb
@@ -20,10 +25,124 @@ const DEFAULT_UNIVERSAL: UniversalProgress = {
 
 const FREE_UNLOCK_HINT_REWARD = 5
 
-function normalizeWalletAddress(
-    walletAddress: string
+function mergeStoredUserRecords(
+    primary: Record<string, unknown>,
+    secondary: Record<string, unknown>
 ) {
-    return walletAddress.trim()
+    const primaryChallenge =
+        (primary.challenge as Record<
+            string,
+            unknown
+        >) || {}
+    const secondaryChallenge =
+        (secondary.challenge as Record<
+            string,
+            unknown
+        >) || {}
+
+    const primaryClassic =
+        (primary.classic as Record<
+            string,
+            unknown
+        >) || {}
+    const secondaryClassic =
+        (secondary.classic as Record<
+            string,
+            unknown
+        >) || {}
+
+    const primaryBest = Number(
+        primaryChallenge.bestTimeSeconds ?? -1
+    )
+    const secondaryBest = Number(
+        secondaryChallenge.bestTimeSeconds ?? -1
+    )
+
+    let bestTimeSeconds = primaryBest
+
+    if (
+        secondaryBest >= 0 &&
+        (primaryBest < 0 ||
+            secondaryBest < primaryBest)
+    ) {
+        bestTimeSeconds = secondaryBest
+    }
+
+    return {
+        username:
+            (typeof primary.username ===
+            "string" &&
+            primary.username.trim()) ||
+            (typeof secondary.username ===
+            "string" &&
+            secondary.username.trim()) ||
+            "Player",
+        hasPurchasedGame:
+            !!primary.hasPurchasedGame ||
+            !!secondary.hasPurchasedGame,
+        hints: Math.max(
+            Number(primary.hints ?? 0),
+            Number(secondary.hints ?? 0)
+        ),
+        tutorialCompleted:
+            !!primary.tutorialCompleted ||
+            !!secondary.tutorialCompleted,
+        classic: {
+            level: Math.max(
+                Number(
+                    primaryClassic.level ?? 1
+                ),
+                Number(
+                    secondaryClassic.level ?? 1
+                )
+            )
+        },
+        challenge: {
+            chances: Math.max(
+                Number(
+                    primaryChallenge.chances ?? 0
+                ),
+                Number(
+                    secondaryChallenge.chances ??
+                    0
+                )
+            ),
+            lastResetUnixMilliseconds:
+                Math.max(
+                    Number(
+                        primaryChallenge.lastResetUnixMilliseconds ??
+                        0
+                    ),
+                    Number(
+                        secondaryChallenge.lastResetUnixMilliseconds ??
+                        0
+                    )
+                ),
+            streakCycleIndex:
+                Math.max(
+                    Number(
+                        primaryChallenge.streakCycleIndex ??
+                        0
+                    ),
+                    Number(
+                        secondaryChallenge.streakCycleIndex ??
+                        0
+                    )
+                ),
+            streakMask:
+                Math.max(
+                    Number(
+                        primaryChallenge.streakMask ??
+                        0
+                    ),
+                    Number(
+                        secondaryChallenge.streakMask ??
+                        0
+                    )
+                ),
+            bestTimeSeconds
+        }
+    }
 }
 
 export function buildDefaultUserSnapshot(
@@ -173,7 +292,7 @@ export async function getUniversalSnapshot() {
 export async function getOrCreateUserSnapshot(
     wallet: Address | string
 ) {
-    const normalizedWallet =
+    const canonicalWallet =
         normalizeWalletAddress(
             wallet as string
         )
@@ -181,47 +300,97 @@ export async function getOrCreateUserSnapshot(
     const universal =
         await getUniversalSnapshot()
 
-    const rawUser =
-        await readDb<any>(
-            `users/${normalizedWallet}`
+    const dbKeys =
+        getLegacyWalletDbKeys(
+            canonicalWallet
         )
 
-    if (!rawUser) {
+    let mergedRaw:
+        | Record<string, unknown>
+        | null = null
+    const keysToDelete: string[] =
+        []
+
+    for (const key of dbKeys) {
+        const raw =
+            await readDb<
+                Record<string, unknown>
+            >(`users/${key}`)
+
+        if (!raw) {
+            continue
+        }
+
+        mergedRaw = mergedRaw
+            ? mergeStoredUserRecords(
+                mergedRaw,
+                raw
+            )
+            : raw
+
+        if (key !== canonicalWallet) {
+            keysToDelete.push(key)
+        }
+    }
+
+    if (!mergedRaw) {
         const user =
             buildDefaultUserSnapshot(
-                normalizedWallet,
+                canonicalWallet,
                 universal
             )
 
         await writeDb(
-            `users/${normalizedWallet}`,
+            `users/${canonicalWallet}`,
             buildStoredUserRecord(user)
         )
         await deleteDb(
-            `users/${normalizedWallet}/universal`
+            `users/${canonicalWallet}/universal`
         )
+
         return user
     }
 
     const user =
         mergeSnapshot(
-            normalizedWallet,
-            rawUser,
+            canonicalWallet,
+            mergedRaw,
             universal
         )
 
     const hasLegacyFields =
-        Object.prototype.hasOwnProperty.call(rawUser, "revives") ||
-        Object.prototype.hasOwnProperty.call(rawUser, "lives") ||
-        Object.prototype.hasOwnProperty.call(rawUser, "universal")
+        Object.prototype.hasOwnProperty.call(
+            mergedRaw,
+            "revives"
+        ) ||
+        Object.prototype.hasOwnProperty.call(
+            mergedRaw,
+            "lives"
+        ) ||
+        Object.prototype.hasOwnProperty.call(
+            mergedRaw,
+            "universal"
+        )
 
-    if (hasLegacyFields) {
+    const shouldPersist =
+        keysToDelete.length > 0 ||
+        hasLegacyFields
+
+    if (shouldPersist) {
         await writeDb(
-            `users/${normalizedWallet}`,
+            `users/${canonicalWallet}`,
             buildStoredUserRecord(user)
         )
+
+        for (const key of keysToDelete) {
+            await deleteDb(`users/${key}`)
+            await deleteDb(
+                `users/${key}/universal`
+            )
+        }
+
         await deleteDb(
-            `users/${normalizedWallet}/universal`
+            `users/${canonicalWallet}/universal`
         )
     }
 
@@ -231,9 +400,15 @@ export async function getOrCreateUserSnapshot(
 export function sanitizeSnapshot(
     snapshot: UserSnapshot
 ): UserSnapshot {
+    const walletAddress =
+        snapshot.walletAddress
+            ? normalizeWalletAddress(
+                snapshot.walletAddress
+            )
+            : ""
+
     return {
-        walletAddress:
-            snapshot.walletAddress || "",
+        walletAddress,
         username:
             snapshot.username || "Player",
         hasPurchasedGame:

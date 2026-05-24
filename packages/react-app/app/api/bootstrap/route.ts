@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import {
     bootstrapUserSnapshot
 } from "@/lib/server-user-state"
+import { normalizeWalletAddress } from "@/lib/walletAddress"
 
 export async function POST(
     request: Request
@@ -11,12 +12,12 @@ export async function POST(
         const body =
             await request.json()
 
-        const wallet =
+        const rawWallet =
             typeof body.walletAddress === "string"
                 ? body.walletAddress.trim()
                 : ""
 
-        if (!wallet) {
+        if (!rawWallet) {
             return NextResponse.json(
                 {
                     success: false,
@@ -28,6 +29,11 @@ export async function POST(
                 }
             )
         }
+
+        const wallet =
+            normalizeWalletAddress(
+                rawWallet
+            )
 
         const snapshot =
             await bootstrapUserSnapshot(

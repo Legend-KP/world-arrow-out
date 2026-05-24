@@ -6,6 +6,7 @@ import {
 
 import { apiPost } from "@/lib/api"
 import { normalizeMiniKitPayError } from "@/lib/minikitErrors"
+import { normalizeWalletAddress } from "@/lib/walletAddress"
 import {
     ensureMiniKitInstalledAsync,
     getMiniKitUnavailableMessageAsync
@@ -97,7 +98,9 @@ export async function miniKitPay(
             )
         }
 
-        return payer
+        return normalizeWalletAddress(
+            payer
+        )
     } catch (error) {
         throw new Error(
             normalizeMiniKitPayError(error)

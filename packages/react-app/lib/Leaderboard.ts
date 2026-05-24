@@ -4,6 +4,7 @@ import {
     patchDb,
     readDb
 } from "./firebase-server"
+import { normalizeWalletAddress } from "./walletAddress"
 
 const CURRENT_CHALLENGE_PATH =
     "universal/currentChallenge"
@@ -22,14 +23,6 @@ interface StoredLeaderboardEntry {
     walletAddress: string
     completionSeconds: number
     updatedAt: number
-}
-
-function normalizeWalletAddress(
-    walletAddress: string
-) {
-    return (
-        walletAddress || ""
-    ).trim()
 }
 
 function normalizePatternName(

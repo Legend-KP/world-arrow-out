@@ -5,6 +5,7 @@ import {
   completeHintPurchase,
   completeRevivePurchase
 } from "@/lib/server-user-state"
+import { normalizeWalletAddress } from "@/lib/walletAddress"
 
 export async function POST(
   request: Request
@@ -16,12 +17,12 @@ export async function POST(
     const action =
       body.action
 
-    const walletAddress =
+    const rawWallet =
       typeof body.walletAddress === "string"
         ? body.walletAddress.trim()
         : ""
 
-    if (!walletAddress) {
+    if (!rawWallet) {
       return NextResponse.json(
         {
           success: false,
@@ -32,6 +33,9 @@ export async function POST(
         }
       )
     }
+
+    const walletAddress =
+      normalizeWalletAddress(rawWallet)
 
     if (action === "game") {
       const result =

@@ -164,12 +164,20 @@ export default function GameClient() {
     async function bootstrap(
         wallet: string
     ) {
+        const walletAddress =
+            wallet?.trim()
+
+        if (!walletAddress) {
+            throw new Error(
+                "Wallet missing — cannot bootstrap"
+            )
+        }
+
         const response =
             await apiPost(
                 "/api/bootstrap",
                 {
-                    walletAddress:
-                        wallet
+                    walletAddress
                 }
             )
 

@@ -1,10 +1,21 @@
-export async function apiPost(url: string, body: any) {
+export async function apiPost(
+    url: string,
+    body: Record<string, unknown>
+) {
+    const payload = JSON.stringify(body)
+
+    if (payload === "{}") {
+        throw new Error(
+            `apiPost(${url}): request body is empty — check all fields are defined`
+        )
+    }
+
     const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify(body)
+        body: payload
     })
 
     if (!res.ok) {

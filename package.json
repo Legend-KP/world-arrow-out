@@ -1,34 +1,36 @@
 {
-    "name": "celo-composer-minipay-template",
+    "name": "world-arrow-out",
     "version": "1.0.0",
-    "description": "Custom Celo Composer project.",
+    "description": "World Arrow Out — World App mini game (Next.js + Unity bridge, Firebase, Cloudflare).",
     "private": true,
-    "author": "Celo",
     "license": "MIT",
     "scripts": {
-        "build:cloudflare": "pnpm --filter @examples/react-app exec opennextjs-cloudflare build",
-        "deploy:only": "pnpm --filter @examples/react-app exec opennextjs-cloudflare deploy",
-        "upload:only": "pnpm --filter @examples/react-app exec opennextjs-cloudflare upload",
-        "preview:cloudflare": "pnpm --filter @examples/react-app run preview",
-        "deploy:cloudflare": "pnpm --filter @examples/react-app run deploy",
-        "upload:cloudflare": "pnpm --filter @examples/react-app run upload",
+        "build:cloudflare": "pnpm --filter @world-arrow-out/react-app exec opennextjs-cloudflare build",
+        "deploy:only": "pnpm --filter @world-arrow-out/react-app exec opennextjs-cloudflare deploy",
+        "upload:only": "pnpm --filter @world-arrow-out/react-app exec opennextjs-cloudflare upload",
+        "preview:cloudflare": "pnpm --filter @world-arrow-out/react-app run preview",
+        "deploy:cloudflare": "pnpm --filter @world-arrow-out/react-app run deploy",
+        "upload:cloudflare": "pnpm --filter @world-arrow-out/react-app run upload",
         "deploy": "pnpm run deploy:cloudflare"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/celo-org/celo-composer.git"
+        "url": "git+https://github.com/Legend-KP/world-arrow-out.git"
     },
     "bugs": {
-        "url": "https://github.com/celo-org/celo-composer/issues"
+        "url": "https://github.com/Legend-KP/world-arrow-out/issues"
     },
-    "homepage": "https://github.com/celo-org/celo-composer/blob/main/README.md",
+    "homepage": "https://github.com/Legend-KP/world-arrow-out#readme",
     "workspaces": [
         "packages/*",
         "hardhat/*"
     ],
     "keywords": [
-        "celo-composer",
-        "celo"
+        "world-app",
+        "minikit",
+        "nextjs",
+        "firebase",
+        "cloudflare"
     ],
     "dependencies": {
         "@tanstack/react-query": "^5.100.5",

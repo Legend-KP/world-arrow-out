@@ -1,4 +1,4 @@
-﻿﻿"use client"
+﻿"use client"
 
 import {
     useEffect,
@@ -10,6 +10,10 @@ import {
 } from "@/lib/wallet"
 
 import {
+    authenticateWallet
+} from "@/lib/walletAuth"
+
+import {
     sendToUnity
 } from "@/lib/bridge"
 
@@ -18,14 +22,12 @@ import {
 } from "@/lib/api"
 
 import {
-    getEntryPaymentStatus,
-    runMiniPayPayment
-} from "@/lib/purchase"
+    runWorldPayment
+} from "@/lib/worldPay"
 
 declare global {
     interface Window {
         unityInstance?: any
-        ethereum?: any
     }
 }
 
@@ -84,9 +86,7 @@ export default function GameClient() {
                         break
 
                     case "MINIPAY_PURCHASE_GAME":
-                        await handlePurchaseGame(
-                            data.payload
-                        )
+                        await handlePurchaseGame()
                         break
 
                     case "MINIPAY_BUY_HINTS":
@@ -144,7 +144,7 @@ export default function GameClient() {
     async function bootstrap(
         wallet: string
     ) {
-        let response =
+        const response =
             await apiPost(
                 "/api/bootstrap",
                 {
@@ -157,52 +157,6 @@ export default function GameClient() {
             throw new Error(
                 response.error
             )
-        }
-
-        if (
-            !response.snapshot
-                ?.hasPurchasedGame
-        ) {
-            try {
-                const paymentStatus =
-                    await getEntryPaymentStatus(
-                        wallet as `0x${string}`
-                    )
-
-                if (
-                    paymentStatus.payCount > BigInt(0) ||
-                    paymentStatus.payCountUSDT > BigInt(0) ||
-                    paymentStatus.payCountUSDC > BigInt(0)
-                ) {
-                    const recovered =
-                        await apiPost(
-                            "/api/purchase",
-                            {
-                                action: "game",
-                                walletAddress:
-                                    wallet
-                            }
-                        )
-
-                    if (
-                        recovered.success &&
-                        recovered.result?.snapshot
-                    ) {
-                        response = {
-                            ...response,
-                            snapshot:
-                                recovered
-                                    .result
-                                    .snapshot
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error(
-                    "Bootstrap purchase reconciliation failed",
-                    error
-                )
-            }
         }
 
         sendToUnity(
@@ -230,10 +184,7 @@ export default function GameClient() {
             lower.includes("rejected") ||
             lower.includes("denied") ||
             lower.includes("insufficient") ||
-            lower.includes("transaction timeout") ||
-            lower.includes("execution reverted") ||
-            lower.includes("transaction failed") ||
-            lower.includes("rate limit")
+            lower.includes("world app")
         ) {
             return {
                 message,
@@ -248,24 +199,22 @@ export default function GameClient() {
     }
 
     async function handleBootstrap() {
-        const wallet =
-            await getWalletSafe()
+        try {
+            const wallet =
+                await authenticateWallet()
 
-        if (!wallet) {
+            sendToUnity(
+                "OnWalletAddressResolved",
+                wallet
+            )
+
+            await bootstrap(wallet)
+        } catch {
             sendToUnity(
                 "OnWalletAddressResolved",
                 ""
             )
-
-            return
         }
-
-        sendToUnity(
-            "OnWalletAddressResolved",
-            wallet
-        )
-
-        await bootstrap(wallet)
     }
 
     async function handleSync(
@@ -291,14 +240,10 @@ export default function GameClient() {
         )
     }
 
-    async function handlePurchaseGame(
-        payload: any
-    ) {
+    async function handlePurchaseGame() {
         try {
             const wallet =
-                await runMiniPayPayment(
-                    payload?.token ||
-                    "USDT",
+                await runWorldPayment(
                     "entry"
                 )
 
@@ -308,10 +253,7 @@ export default function GameClient() {
                         "/api/purchase",
                         {
                             action: "game",
-                            walletAddress: wallet,
-                            token:
-                                payload?.token ||
-                                "USDT"
+                            walletAddress: wallet
                         }
                     )
 
@@ -377,9 +319,7 @@ export default function GameClient() {
     ) {
         try {
             const wallet =
-                await runMiniPayPayment(
-                    payload?.token ||
-                    "USDT",
+                await runWorldPayment(
                     "hint"
                 )
 
@@ -390,10 +330,7 @@ export default function GameClient() {
                         action: "hints",
                         walletAddress: wallet,
                         amount:
-                            payload?.amount || 5,
-                        token:
-                            payload?.token ||
-                            "USDT"
+                            payload?.amount || 5
                     }
                 )
 
@@ -426,9 +363,7 @@ export default function GameClient() {
                     : "reviveClassic"
 
             const wallet =
-                await runMiniPayPayment(
-                    payload?.token ||
-                    "USDT",
+                await runWorldPayment(
                     reviveKind
                 )
 
@@ -437,10 +372,7 @@ export default function GameClient() {
                     "/api/purchase",
                     {
                         action: "revive",
-                        walletAddress: wallet,
-                        token:
-                            payload?.token ||
-                            "USDT"
+                        walletAddress: wallet
                     }
                 )
 
@@ -566,4 +498,3 @@ export default function GameClient() {
         </div>
     )
 }
-

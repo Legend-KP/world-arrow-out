@@ -49,8 +49,21 @@ export default function GameClient() {
                         | null
 
                 if (!wallet) {
-                    wallet =
-                        await authenticateWallet()
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, 1500)
+                    )
+
+                    try {
+                        wallet =
+                            await authenticateWallet()
+                    } catch (authError) {
+                        console.log(
+                            "Auth not available:",
+                            authError
+                        )
+
+                        return
+                    }
                 }
 
                 if (!wallet) {

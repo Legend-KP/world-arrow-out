@@ -8,6 +8,12 @@
         "global_fetch_strictly_public"
     ],
     "keep_vars": true,
+    "vars": {
+        "APP_ID": "app_d8635e9ce8aa3188821440f213ca9d73",
+        "NEXT_PUBLIC_APP_ID": "app_d8635e9ce8aa3188821440f213ca9d73",
+        "NEXT_PUBLIC_WORLD_RECEIVING_WALLET": "0x11015f39Ac7389201aEc778Be8e3D84f2aF44A70",
+        "WORLD_RECEIVING_WALLET": "0x11015f39Ac7389201aEc778Be8e3D84f2aF44A70"
+    },
     "observability": {
         "enabled": false,
         "logs": {

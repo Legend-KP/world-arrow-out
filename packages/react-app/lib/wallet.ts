@@ -5,8 +5,10 @@ import {
     getCachedWallet
 } from "@/lib/walletAuth"
 import {
-    ensureMiniKitInstalled
+    ensureMiniKitInstalledAsync,
+    getCachedAppId
 } from "@/lib/minikitClient"
+
 export async function getWallet(): Promise<Address> {
     const cached =
         getCachedWallet()
@@ -20,7 +22,11 @@ export async function getWallet(): Promise<Address> {
 
 export async function getWalletSafe(): Promise<Address | null> {
     try {
-        if (!ensureMiniKitInstalled()) {
+        if (!getCachedAppId()) {
+            return null
+        }
+
+        if (!(await ensureMiniKitInstalledAsync())) {
             return null
         }
 

@@ -3,12 +3,12 @@
 import { useEffect } from "react"
 
 import {
-    ensureMiniKitInstalled
+    ensureMiniKitInstalledAsync
 } from "@/lib/minikitClient"
 
 export function MiniKitBootstrap() {
     useEffect(() => {
-        ensureMiniKitInstalled()
+        void ensureMiniKitInstalledAsync()
     }, [])
 
     return null

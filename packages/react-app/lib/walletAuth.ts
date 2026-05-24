@@ -3,8 +3,8 @@ import { MiniKit } from "@worldcoin/minikit-js"
 import { apiPost } from "@/lib/api"
 import { normalizeWalletAuthError } from "@/lib/minikitErrors"
 import {
-    ensureMiniKitInstalled,
-    getMiniKitUnavailableMessage
+    ensureMiniKitInstalledAsync,
+    getMiniKitUnavailableMessageAsync
 } from "@/lib/minikitClient"
 
 const WALLET_AUTH_STATEMENT =
@@ -27,9 +27,9 @@ export function setCachedWallet(
 }
 
 export async function authenticateWallet(): Promise<string> {
-    if (!ensureMiniKitInstalled()) {
+    if (!(await ensureMiniKitInstalledAsync())) {
         throw new Error(
-            getMiniKitUnavailableMessage()
+            await getMiniKitUnavailableMessageAsync()
         )
     }
 

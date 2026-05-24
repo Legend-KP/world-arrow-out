@@ -7,17 +7,17 @@ import {
 import { apiPost } from "@/lib/api"
 import { normalizeMiniKitPayError } from "@/lib/minikitErrors"
 import {
-    ensureMiniKitInstalled,
-    getMiniKitUnavailableMessage
+    ensureMiniKitInstalledAsync,
+    getMiniKitUnavailableMessageAsync
 } from "@/lib/minikitClient"
 
 export async function miniKitPay(
     amount: string,
     description: string
 ): Promise<string> {
-    if (!ensureMiniKitInstalled()) {
+    if (!(await ensureMiniKitInstalledAsync())) {
         throw new Error(
-            getMiniKitUnavailableMessage()
+            await getMiniKitUnavailableMessageAsync()
         )
     }
 

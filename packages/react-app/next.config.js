@@ -2,7 +2,9 @@
 const path = require("path");
 const dotenv = require("dotenv");
 
+// Monorepo env files (root + react-app)
 dotenv.config({ path: path.join(__dirname, "../../.env") });
+dotenv.config({ path: path.join(__dirname, "../../.env.local") });
 dotenv.config({ path: path.join(__dirname, ".env") });
 dotenv.config({ path: path.join(__dirname, ".env.local") });
 
@@ -32,8 +34,18 @@ if (!process.env.DEV_PORTAL_API_KEY) {
     "";
 }
 
+const publicAppId = process.env.NEXT_PUBLIC_APP_ID || "";
+const publicReceivingWallet =
+  process.env.NEXT_PUBLIC_WORLD_RECEIVING_WALLET || "";
+
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: path.join(__dirname, "../.."),
+  // Force embed into client bundle at build time
+  env: {
+    NEXT_PUBLIC_APP_ID: publicAppId,
+    NEXT_PUBLIC_WORLD_RECEIVING_WALLET: publicReceivingWallet,
+  },
   serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"],
   webpack: (config) => {
     config.resolve.fallback = {

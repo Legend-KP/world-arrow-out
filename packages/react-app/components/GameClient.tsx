@@ -43,8 +43,15 @@ export default function GameClient() {
 
         async function preload() {
             try {
-                const wallet =
-                    await getWalletSafe()
+                let wallet: string | null =
+                    (await getWalletSafe()) as
+                        | string
+                        | null
+
+                if (!wallet) {
+                    wallet =
+                        await authenticateWallet()
+                }
 
                 if (!wallet) {
                     console.log(

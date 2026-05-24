@@ -1,20 +1,23 @@
-// Root pointer for Cloudflare CI when the project root is the monorepo.
-// Prefer setting the Workers build root directory to packages/react-app instead.
 {
     "$schema": "node_modules/wrangler/config-schema.json",
     "name": "world-arrow-out",
-    "main": "packages/react-app/.open-next/worker.js",
-    "compatibility_date": "2024-12-30",
+    "main": ".open-next/worker.js",
+    "compatibility_date": "2026-05-01",
     "compatibility_flags": [
         "nodejs_compat",
         "global_fetch_strictly_public"
     ],
     "keep_vars": true,
-    "vars": {
-        "NEXT_PRIVATE_MINIMAL_MODE": "1"
+    "observability": {
+        "enabled": false,
+        "logs": {
+            "enabled": true,
+            "persist": true,
+            "invocation_logs": true
+        }
     },
     "assets": {
-        "directory": "packages/react-app/.open-next/assets",
+        "directory": ".open-next/assets",
         "binding": "ASSETS"
     },
     "services": [
@@ -23,4 +26,9 @@
             "service": "world-arrow-out"
         }
     ]
+    // All vars & secrets live in Cloudflare Dashboard → Worker → Settings → Variables
+    // Plain vars: NEXT_PUBLIC_FIREBASE_*, NEXT_PUBLIC_APP_ID, NEXT_PUBLIC_WORLD_RECEIVING_WALLET
+    // Secrets: FIREBASE_DATABASE_SECRET, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
+    //          FIREBASE_DATABASE_URL, DEV_PORTAL_API_KEY
+    // Local dev: use .dev.vars (gitignored) — never .env for wrangler
 }

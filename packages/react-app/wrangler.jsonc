@@ -2,14 +2,19 @@
     "$schema": "node_modules/wrangler/config-schema.json",
     "name": "world-arrow-out",
     "main": ".open-next/worker.js",
-    "compatibility_date": "2024-12-30",
+    "compatibility_date": "2026-05-01",
     "compatibility_flags": [
         "nodejs_compat",
         "global_fetch_strictly_public"
     ],
     "keep_vars": true,
-    "vars": {
-        "NEXT_PRIVATE_MINIMAL_MODE": "1"
+    "observability": {
+        "enabled": false,
+        "logs": {
+            "enabled": true,
+            "persist": true,
+            "invocation_logs": true
+        }
     },
     "assets": {
         "directory": ".open-next/assets",
@@ -21,17 +26,9 @@
             "service": "world-arrow-out"
         }
     ]
+    // All vars & secrets live in Cloudflare Dashboard → Worker → Settings → Variables
+    // Plain vars: NEXT_PUBLIC_FIREBASE_*, NEXT_PUBLIC_APP_ID, NEXT_PUBLIC_WORLD_RECEIVING_WALLET
+    // Secrets: FIREBASE_DATABASE_SECRET, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
+    //          FIREBASE_DATABASE_URL, DEV_PORTAL_API_KEY
+    // Local dev: use .dev.vars (gitignored) — never .env for wrangler
 }
-
-// Required Cloudflare secrets (Dashboard → Workers → Settings → Variables):
-//   FIREBASE_DATABASE_SECRET   — Realtime Database secret from Firebase Console
-//   DEV_PORTAL_API_KEY         — World Developer Portal API key (Pay verification)
-//   WORLD_RECEIVING_WALLET     — optional runtime override for payments
-//
-// Build-time env (must be present when running deploy / opennext build):
-//   NEXT_PUBLIC_APP_ID
-//   NEXT_PUBLIC_WORLD_RECEIVING_WALLET
-//   NEXT_PUBLIC_FIREBASE_DATABASE_URL
-//
-// Pay uses MiniKit.pay (Tokens.USDC) — no USDC contract address in client code.
-// Whitelist receiving wallet under Developer Portal → Payments.

@@ -209,10 +209,21 @@ export default function GameClient() {
             )
 
             await bootstrap(wallet)
-        } catch {
+        } catch (error: any) {
+            console.error(
+                "Bootstrap failed",
+                error
+            )
+
             sendToUnity(
                 "OnWalletAddressResolved",
                 ""
+            )
+
+            sendToUnity(
+                "OnBridgeLogReceived",
+                error?.message ||
+                "Could not connect wallet"
             )
         }
     }

@@ -1,5 +1,9 @@
 import "server-only"
 
+import {
+    getFirebaseAccessToken
+} from "./firebase-auth"
+
 function normalizeDatabaseUrl(
     rawUrl?: string
 ) {
@@ -36,20 +40,17 @@ function normalizeDatabaseUrl(
 
 const databaseUrl =
     normalizeDatabaseUrl(
+        process.env.FIREBASE_DATABASE_URL ||
         process.env
             .NEXT_PUBLIC_FIREBASE_DATABASE_URL
     )
 
-const databaseSecret =
-    process.env
-        .FIREBASE_DATABASE_SECRET
-
-function buildDbUrl(
+async function buildDbUrl(
     path: string
 ) {
     if (!databaseUrl) {
         throw new Error(
-            "Firebase database URL is missing."
+            "Firebase database URL is missing. Set NEXT_PUBLIC_FIREBASE_DATABASE_URL or FIREBASE_DATABASE_URL."
         )
     }
 
@@ -64,10 +65,24 @@ function buildDbUrl(
             : `${databaseUrl}/.json`
     )
 
-    if (databaseSecret) {
+    const auth =
+        await getFirebaseAccessToken()
+
+    if (!auth) {
+        throw new Error(
+            "Firebase credentials are missing. Set FIREBASE_DATABASE_SECRET on Cloudflare, or FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY."
+        )
+    }
+
+    if (auth.kind === "legacy_secret") {
         url.searchParams.set(
             "auth",
-            databaseSecret
+            auth.value
+        )
+    } else {
+        url.searchParams.set(
+            "access_token",
+            auth.value
         )
     }
 
@@ -81,7 +96,7 @@ async function requestJson<T>(
 ) {
     const response =
         await fetch(
-            buildDbUrl(path),
+            await buildDbUrl(path),
             {
                 method,
                 headers: {
@@ -97,9 +112,27 @@ async function requestJson<T>(
         )
 
     if (!response.ok) {
+        const rawBody =
+            await response.text()
+
+        if (response.status === 401) {
+            throw new Error(
+                "Firebase permission denied. Regenerate FIREBASE_DATABASE_SECRET in Firebase Console (Realtime Database → Settings) and set it as a Cloudflare secret, then redeploy."
+            )
+        }
+
         throw new Error(
-            `Firebase ${method} ${path} failed with ${response.status}.`
+            `Firebase ${method} ${path} failed with ${response.status}: ${rawBody}`
         )
+    }
+
+    if (
+        response.status === 204 ||
+        response.headers.get(
+            "content-length"
+        ) === "0"
+    ) {
+        return null as T
     }
 
     return await response.json() as T

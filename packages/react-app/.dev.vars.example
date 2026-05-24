@@ -1,11 +1,11 @@
 # Copy to .dev.vars for local Cloudflare Workers preview (wrangler).
-# These mirror server-side secrets from .env — do not commit .dev.vars.
+# These mirror server-side secrets from the repo root .env — do not commit .dev.vars.
 
 NEXTJS_ENV=development
 NEXT_PRIVATE_MINIMAL_MODE=1
 
-# WalletConnect Cloud project ID (also set NEXT_PUBLIC_WC_PROJECT_ID in .env)
-WC_PROJECT_ID=
-
 # Firebase Realtime Database secret (server-side only)
 FIREBASE_DATABASE_SECRET=
+
+# Optional payment override
+WORLD_RECEIVING_WALLET=

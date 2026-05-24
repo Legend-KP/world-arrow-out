@@ -177,6 +177,9 @@ importers:
       firebase:
         specifier: ^12.12.1
         version: 12.12.1
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
       lucide-react:
         specifier: ^0.454.0
         version: 0.454.0(react@18.3.1)

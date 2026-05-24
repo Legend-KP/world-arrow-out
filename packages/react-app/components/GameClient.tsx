@@ -448,7 +448,12 @@ export default function GameClient() {
 
             sendToUnity(
                 "OnLeaderboardSubmitted",
-                ""
+                JSON.stringify({
+                    chancesLeft:
+                        response.chancesLeft,
+                    challenge:
+                        response.challenge
+                })
             )
         } catch (error: any) {
             sendToUnity(
@@ -484,7 +489,11 @@ export default function GameClient() {
                     entries:
                         response.entries,
                     playerRank:
-                        response.playerRank
+                        response.playerRank,
+                    chancesLeft:
+                        response.chancesLeft,
+                    playerChallenge:
+                        response.playerChallenge
                 })
             )
         } catch (error: any) {

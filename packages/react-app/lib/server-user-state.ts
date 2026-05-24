@@ -29,6 +29,9 @@ const DEFAULT_UNIVERSAL: UniversalProgress = {
 }
 
 const FREE_UNLOCK_HINT_REWARD = 5
+const CHALLENGE_COOLDOWN_MS =
+    24 * 60 * 60 * 1000
+const DEFAULT_CHALLENGE_CHANCES = 1
 
 function mergeStoredUserRecords(
     primary: Record<string, unknown>,
@@ -311,8 +314,8 @@ function mergeBestTimeSeconds(
     return Math.min(incoming, stored)
 }
 
-/** Hints go down when used and up when purchased — never Math.max with stored. */
-function mergeHints(
+/** Counters that go down on use — sync must not Math.max with stored. */
+function mergeDecreasingCounter(
     incoming: number,
     stored: number
 ) {
@@ -329,7 +332,49 @@ function mergeHints(
         return inc
     }
 
-    return inc
+    return st
+}
+
+function mergeHints(
+    incoming: number,
+    stored: number
+) {
+    return mergeDecreasingCounter(
+        incoming,
+        stored
+    )
+}
+
+function mergeChances(
+    incoming: number,
+    stored: number
+) {
+    return mergeDecreasingCounter(
+        incoming,
+        stored
+    )
+}
+
+export function applyChallengeDailyReset(
+    challenge: UserSnapshot["challenge"]
+): UserSnapshot["challenge"] {
+    const now = Date.now()
+    const lastReset = Number(
+        challenge.lastResetUnixMilliseconds || 0
+    )
+
+    if (
+        now - lastReset <
+        CHALLENGE_COOLDOWN_MS
+    ) {
+        return challenge
+    }
+
+    return {
+        ...challenge,
+        chances: DEFAULT_CHALLENGE_CHANCES,
+        lastResetUnixMilliseconds: now
+    }
 }
 
 function mergeIncomingSnapshotWithStored(
@@ -359,7 +404,7 @@ function mergeIncomingSnapshotWithStored(
             )
         },
         challenge: {
-            chances: Math.max(
+            chances: mergeChances(
                 incoming.challenge.chances,
                 stored.challenge.chances
             ),
@@ -731,6 +776,92 @@ export async function completeRevivePurchase(
         await getOrCreateUserSnapshot(
             walletAddress as Address
         )
+
+    return {
+        success: true,
+        snapshot
+    }
+}
+
+export async function recordChallengePlay(
+    walletAddress: string,
+    completionSeconds: number,
+    chancesAfterPlay?: number
+) {
+    const wallet =
+        normalizeWalletAddress(
+            walletAddress
+        )
+
+    const user =
+        await getOrCreateUserSnapshot(
+            wallet
+        )
+
+    let challenge =
+        applyChallengeDailyReset(
+            user.challenge
+        )
+
+    const hasExplicitChances =
+        typeof chancesAfterPlay ===
+        "number" &&
+        Number.isFinite(chancesAfterPlay)
+
+    const nextChances = hasExplicitChances
+        ? Math.max(
+            0,
+            Math.floor(chancesAfterPlay)
+        )
+        : challenge.chances - 1
+
+    if (
+        !hasExplicitChances &&
+        challenge.chances <= 0
+    ) {
+        return {
+            success: false,
+            error: "No chances left",
+            snapshot: {
+                ...user,
+                challenge
+            }
+        }
+    }
+
+    if (nextChances < 0) {
+        return {
+            success: false,
+            error: "No chances left",
+            snapshot: {
+                ...user,
+                challenge
+            }
+        }
+    }
+
+    challenge = {
+        ...challenge,
+        chances: nextChances,
+        bestTimeSeconds:
+            mergeBestTimeSeconds(
+                Number(completionSeconds),
+                challenge.bestTimeSeconds
+            )
+    }
+
+    const snapshot = {
+        ...user,
+        challenge
+    }
+
+    await writeDb(
+        `users/${wallet}`,
+        buildStoredUserRecord(snapshot)
+    )
+    await deleteDb(
+        `users/${wallet}/universal`
+    )
 
     return {
         success: true,

@@ -5,6 +5,14 @@ import {
     getChallengeLeaderboard
 } from "@/lib/Leaderboard"
 
+import {
+    applyChallengeDailyReset,
+    getOrCreateUserSnapshot,
+    recordChallengePlay
+} from "@/lib/server-user-state"
+
+import { normalizeWalletAddress } from "@/lib/walletAddress"
+
 const MAX_LEADERBOARD_ENTRIES = 25
 
 function clampLimit(
@@ -62,6 +70,43 @@ export async function POST(
                 )
             }
 
+            const chancesAfterPlay =
+                typeof body.chances ===
+                "number"
+                    ? body.chances
+                    : typeof body.chancesLeft ===
+                      "number"
+                      ? body.chancesLeft
+                      : typeof body.challenge
+                            ?.chances ===
+                        "number"
+                        ? body.challenge.chances
+                        : undefined
+
+            const playResult =
+                await recordChallengePlay(
+                    walletAddress,
+                    completionSeconds,
+                    chancesAfterPlay
+                )
+
+            if (!playResult.success) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error:
+                            playResult.error ||
+                            "No chances left",
+                        chancesLeft:
+                            playResult.snapshot
+                                .challenge.chances
+                    },
+                    {
+                        status: 400
+                    }
+                )
+            }
+
             const result =
                 await submitChallengeScore(
                     walletAddress,
@@ -73,7 +118,12 @@ export async function POST(
 
             return NextResponse.json({
                 success: true,
-                result
+                result,
+                challenge:
+                    playResult.snapshot.challenge,
+                chancesLeft:
+                    playResult.snapshot.challenge
+                        .chances
             })
         }
 
@@ -98,12 +148,38 @@ export async function POST(
                     playerWallet
                 )
 
+            let playerChallenge = null
+
+            if (playerWallet) {
+                try {
+                    const wallet =
+                        normalizeWalletAddress(
+                            playerWallet
+                        )
+                    const user =
+                        await getOrCreateUserSnapshot(
+                            wallet
+                        )
+
+                    playerChallenge =
+                        applyChallengeDailyReset(
+                            user.challenge
+                        )
+                } catch {
+                    playerChallenge = null
+                }
+            }
+
             return NextResponse.json({
                 success: true,
                 entries:
                     leaderboard.entries,
                 playerRank:
-                    leaderboard.playerRank
+                    leaderboard.playerRank,
+                playerChallenge,
+                chancesLeft:
+                    playerChallenge?.chances ??
+                    null
             })
         }
 

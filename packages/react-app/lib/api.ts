@@ -1,10 +1,17 @@
 export async function apiPost(
     url: string,
-    body: Record<string, unknown>
+    body: Record<string, unknown> = {}
 ) {
-    const payload = JSON.stringify(body)
+    const cleaned = Object.fromEntries(
+        Object.entries(body).filter(
+            ([, value]) => value !== undefined
+        )
+    )
 
-    if (payload === "{}") {
+    if (
+        Object.keys(body).length > 0 &&
+        Object.keys(cleaned).length === 0
+    ) {
         throw new Error(
             `apiPost(${url}): request body is empty — check all fields are defined`
         )
@@ -15,7 +22,7 @@ export async function apiPost(
         headers: {
             "Content-Type": "application/json"
         },
-        body: payload
+        body: JSON.stringify(cleaned)
     })
 
     if (!res.ok) {
@@ -31,7 +38,11 @@ export async function apiPost(
                 parsed?.message ||
                 rawBody
             )
-        } catch {
+        } catch (error) {
+            if (error instanceof Error) {
+                throw error
+            }
+
             throw new Error(rawBody)
         }
     }

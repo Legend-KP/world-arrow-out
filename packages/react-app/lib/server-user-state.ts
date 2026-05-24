@@ -311,6 +311,27 @@ function mergeBestTimeSeconds(
     return Math.min(incoming, stored)
 }
 
+/** Hints go down when used and up when purchased — never Math.max with stored. */
+function mergeHints(
+    incoming: number,
+    stored: number
+) {
+    const inc = Math.max(
+        0,
+        Number(incoming)
+    )
+    const st = Math.max(
+        0,
+        Number(stored)
+    )
+
+    if (inc <= st) {
+        return inc
+    }
+
+    return inc
+}
+
 function mergeIncomingSnapshotWithStored(
     incoming: UserSnapshot,
     stored: UserSnapshot | null
@@ -327,7 +348,7 @@ function mergeIncomingSnapshotWithStored(
         tutorialCompleted:
             incoming.tutorialCompleted ||
             stored.tutorialCompleted,
-        hints: Math.max(
+        hints: mergeHints(
             incoming.hints,
             stored.hints
         ),

@@ -20,6 +20,7 @@ import {
 import {
     readDb,
     writeDb,
+    patchDb,
     deleteDb
 } from "./firebase-server"
 
@@ -106,7 +107,7 @@ function mergeStoredUserRecords(
             )
         },
         challenge: {
-            chances: Math.max(
+            chances: Math.min(
                 Number(
                     primaryChallenge.chances ?? 0
                 ),
@@ -138,15 +139,13 @@ function mergeStoredUserRecords(
                     )
                 ),
             streakMask:
-                Math.max(
-                    Number(
-                        primaryChallenge.streakMask ??
-                        0
-                    ),
-                    Number(
-                        secondaryChallenge.streakMask ??
-                        0
-                    )
+                Number(
+                    primaryChallenge.streakMask ??
+                    0
+                ) |
+                Number(
+                    secondaryChallenge.streakMask ??
+                    0
                 ),
             bestTimeSeconds
         }
@@ -419,10 +418,13 @@ function mergeIncomingSnapshotWithStored(
                 incoming.challenge.streakCycleIndex,
                 stored.challenge.streakCycleIndex
             ),
-            streakMask: Math.max(
-                incoming.challenge.streakMask,
-                stored.challenge.streakMask
-            ),
+            streakMask:
+                Number(
+                    incoming.challenge.streakMask
+                ) |
+                Number(
+                    stored.challenge.streakMask
+                ),
             bestTimeSeconds:
                 mergeBestTimeSeconds(
                     incoming.challenge
@@ -440,8 +442,19 @@ export async function getUniversalSnapshot() {
             "universal/currentChallenge"
         )
 
+    const weeklyChallengeCycleIndex =
+        Number(
+            snapshot?.weeklyChallengeCycleIndex ??
+            DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
+        )
+    const weeklyChallengeEndUnixMilliseconds =
+        Number(
+            snapshot?.weeklyChallengeEndUnixMilliseconds ??
+            DEFAULT_UNIVERSAL.weeklyChallengeEndUnixMilliseconds
+        )
+
     if (!snapshot) {
-        await writeDb(
+        await patchDb(
             "universal/currentChallenge",
             DEFAULT_UNIVERSAL
         )
@@ -449,17 +462,21 @@ export async function getUniversalSnapshot() {
         return DEFAULT_UNIVERSAL
     }
 
+    if (
+        snapshot.weeklyChallengeCycleIndex ===
+            undefined &&
+        snapshot.weeklyChallengeEndUnixMilliseconds ===
+            undefined
+    ) {
+        await patchDb(
+            "universal/currentChallenge",
+            DEFAULT_UNIVERSAL
+        )
+    }
+
     return {
-        weeklyChallengeCycleIndex:
-            Number(
-                snapshot?.weeklyChallengeCycleIndex ??
-                DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
-            ),
-        weeklyChallengeEndUnixMilliseconds:
-            Number(
-                snapshot?.weeklyChallengeEndUnixMilliseconds ??
-                DEFAULT_UNIVERSAL.weeklyChallengeEndUnixMilliseconds
-            )
+        weeklyChallengeCycleIndex,
+        weeklyChallengeEndUnixMilliseconds
     }
 }
 
@@ -525,12 +542,29 @@ export async function getOrCreateUserSnapshot(
         return user
     }
 
-    const user =
+    let user =
         mergeSnapshot(
             canonicalWallet,
             mergedRaw,
             universal
         )
+
+    const resetChallenge =
+        applyChallengeDailyReset(
+            user.challenge
+        )
+    const didResetChallenge =
+        resetChallenge.chances !==
+            user.challenge.chances ||
+        resetChallenge.lastResetUnixMilliseconds !==
+            user.challenge.lastResetUnixMilliseconds
+
+    if (didResetChallenge) {
+        user = {
+            ...user,
+            challenge: resetChallenge
+        }
+    }
 
     const hasLegacyFields =
         Object.prototype.hasOwnProperty.call(
@@ -548,7 +582,8 @@ export async function getOrCreateUserSnapshot(
 
     const shouldPersist =
         keysToDelete.length > 0 ||
-        hasLegacyFields
+        hasLegacyFields ||
+        didResetChallenge
 
     if (shouldPersist) {
         await writeDb(

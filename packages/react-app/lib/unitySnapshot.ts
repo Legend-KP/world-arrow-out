@@ -4,6 +4,50 @@ import {
     normalizeWalletAddress
 } from "./walletAddress"
 
+const TUTORIAL_COMPLETED_KEYS = [
+    "tutorialCompleted",
+    "TutorialCompleted",
+    "tutorial_done",
+    "TutorialDone",
+    "isTutorialCompleted",
+    "IsTutorialCompleted",
+    "hasCompletedTutorial",
+    "HasCompletedTutorial"
+] as const
+
+function parseBooleanish(
+    value: unknown
+): boolean {
+    if (
+        value === true ||
+        value === 1
+    ) {
+        return true
+    }
+
+    if (
+        value === false ||
+        value === 0 ||
+        value === null ||
+        value === undefined
+    ) {
+        return false
+    }
+
+    if (typeof value === "string") {
+        const lower =
+            value.trim().toLowerCase()
+
+        return (
+            lower === "true" ||
+            lower === "1" ||
+            lower === "yes"
+        )
+    }
+
+    return !!value
+}
+
 function readBooleanField(
     source: Record<string, unknown> | null | undefined,
     ...keys: string[]
@@ -14,11 +58,27 @@ function readBooleanField(
 
     for (const key of keys) {
         if (key in source) {
-            return !!source[key]
+            return parseBooleanish(
+                source[key]
+            )
         }
     }
 
     return false
+}
+
+function asRecord(
+    value: unknown
+): Record<string, unknown> | null {
+    if (
+        !value ||
+        typeof value !== "object" ||
+        Array.isArray(value)
+    ) {
+        return null
+    }
+
+    return value as Record<string, unknown>
 }
 
 export function readTutorialCompleted(
@@ -26,8 +86,43 @@ export function readTutorialCompleted(
 ): boolean {
     return readBooleanField(
         raw,
-        "tutorialCompleted",
-        "TutorialCompleted"
+        ...TUTORIAL_COMPLETED_KEYS
+    )
+}
+
+export function extractTutorialCompletedFromPayload(
+    payload: unknown
+): boolean {
+    const root = asRecord(payload)
+
+    if (!root) {
+        return false
+    }
+
+    const nested = [
+        root,
+        asRecord(root.userState),
+        asRecord(root.snapshot),
+        asRecord(root.data),
+        asRecord(root.state)
+    ].filter(
+        (entry): entry is Record<string, unknown> =>
+            !!entry
+    )
+
+    for (const entry of nested) {
+        if (readTutorialCompleted(entry)) {
+            return true
+        }
+    }
+
+    return (
+        parseBooleanish(
+            root.completeTutorial
+        ) ||
+        parseBooleanish(
+            root.markTutorialComplete
+        )
     )
 }
 
@@ -41,7 +136,7 @@ export function readHasPurchasedGame(
     )
 }
 
-/** Unity JsonUtility often expects PascalCase; Newtonsoft accepts camelCase. Send both. */
+/** Unity JsonUtility often expects PascalCase or 0/1 ints. */
 export function formatSnapshotForUnity(
     snapshot: UserSnapshot
 ) {
@@ -49,6 +144,9 @@ export function formatSnapshotForUnity(
         !!snapshot.tutorialCompleted
     const hasPurchasedGame =
         !!snapshot.hasPurchasedGame
+    const tutorialFlag = tutorialCompleted
+        ? 1
+        : 0
 
     return {
         walletAddress: snapshot.walletAddress,
@@ -58,10 +156,37 @@ export function formatSnapshotForUnity(
         hints: snapshot.hints,
         tutorialCompleted,
         TutorialCompleted: tutorialCompleted,
+        tutorial_completed: tutorialCompleted,
+        tutorialCompletedInt: tutorialFlag,
+        TutorialCompletedInt: tutorialFlag,
         classic: snapshot.classic,
         challenge: snapshot.challenge,
         universal: snapshot.universal
     }
+}
+
+export function sendTutorialStatusToUnity(
+    sendToUnity: (
+        method: string,
+        payload?: unknown
+    ) => void,
+    tutorialCompleted: boolean
+) {
+    const flag = tutorialCompleted
+        ? "true"
+        : "false"
+    const intFlag = tutorialCompleted
+        ? "1"
+        : "0"
+
+    sendToUnity(
+        "OnTutorialCompleted",
+        flag
+    )
+    sendToUnity(
+        "OnTutorialStatus",
+        intFlag
+    )
 }
 
 export function normalizeIncomingSnapshot(
@@ -93,6 +218,11 @@ export function normalizeIncomingSnapshot(
             unknown
         > | undefined) || {}
 
+    const tutorialCompleted =
+        extractTutorialCompletedFromPayload(
+            snapshot
+        )
+
     return {
         walletAddress,
         username:
@@ -107,8 +237,7 @@ export function normalizeIncomingSnapshot(
             0,
             Number(snapshot?.hints ?? 0)
         ),
-        tutorialCompleted:
-            readTutorialCompleted(snapshot),
+        tutorialCompleted,
         classic: {
             level: Math.max(
                 1,

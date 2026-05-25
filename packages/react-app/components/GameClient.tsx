@@ -6,7 +6,8 @@ import {
 } from "react"
 
 import {
-    authenticateWallet
+    authenticateWallet,
+    getCachedWallet
 } from "@/lib/walletAuth"
 
 import {
@@ -23,7 +24,9 @@ import {
 
 import {
     formatSnapshotForUnity,
-    normalizeIncomingSnapshot
+    normalizeIncomingSnapshot,
+    extractTutorialCompletedFromPayload,
+    sendTutorialStatusToUnity
 } from "@/lib/unitySnapshot"
 
 declare global {
@@ -58,6 +61,13 @@ export default function GameClient() {
 
                     case "MINIPAY_SYNC_USER_STATE":
                         await handleSync(
+                            data.payload
+                        )
+                        break
+
+                    case "MINIPAY_COMPLETE_TUTORIAL":
+                    case "MINIPAY_TUTORIAL_COMPLETE":
+                        await handleCompleteTutorial(
                             data.payload
                         )
                         break
@@ -144,11 +154,20 @@ export default function GameClient() {
             )
         }
 
-        sendToUnity(
-            "OnBootstrapDataReceived",
+        const formatted =
             formatSnapshotForUnity(
                 response.snapshot
             )
+
+        sendToUnity(
+            "OnBootstrapDataReceived",
+            formatted
+        )
+
+        sendTutorialStatusToUnity(
+            sendToUnity,
+            !!response.snapshot
+                ?.tutorialCompleted
         )
     }
 
@@ -223,6 +242,26 @@ export default function GameClient() {
                 snapshot
             )
 
+        if (
+            extractTutorialCompletedFromPayload(
+                snapshot
+            )
+        ) {
+            const wallet =
+                normalizedSnapshot.walletAddress
+
+            if (wallet) {
+                await apiPost(
+                    "/api/tutorial/complete",
+                    {
+                        walletAddress: wallet
+                    }
+                )
+            }
+
+            normalizedSnapshot.tutorialCompleted = true
+        }
+
         const response =
             await apiPost(
                 "/api/sync",
@@ -238,11 +277,61 @@ export default function GameClient() {
             )
         }
 
-        sendToUnity(
-            "OnUserStateSynced",
+        const formatted =
             formatSnapshotForUnity(
                 response.snapshot
             )
+
+        sendToUnity(
+            "OnUserStateSynced",
+            formatted
+        )
+
+        sendTutorialStatusToUnity(
+            sendToUnity,
+            !!response.snapshot
+                ?.tutorialCompleted
+        )
+    }
+
+    async function handleCompleteTutorial(
+        payload: any
+    ) {
+        const wallet =
+            (typeof payload?.walletAddress ===
+            "string" &&
+            payload.walletAddress.trim()) ||
+            getCachedWallet() ||
+            (await authenticateWallet())
+
+        const response =
+            await apiPost(
+                "/api/tutorial/complete",
+                {
+                    walletAddress: wallet,
+                    ...payload
+                }
+            )
+
+        if (!response.success) {
+            throw new Error(
+                response.error
+            )
+        }
+
+        const formatted =
+            formatSnapshotForUnity(
+                response.snapshot
+            )
+
+        sendToUnity(
+            "OnUserStateSynced",
+            formatted
+        )
+
+        sendTutorialStatusToUnity(
+            sendToUnity,
+            true
         )
     }
 

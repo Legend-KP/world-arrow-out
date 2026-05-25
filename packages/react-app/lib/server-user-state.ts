@@ -691,6 +691,40 @@ export async function bootstrapUserSnapshot(
     )
 }
 
+/** Only persisted under users/{wallet} via sync or this helper. */
+export async function markTutorialCompleted(
+    walletAddress: string
+) {
+    const wallet =
+        normalizeWalletAddress(
+            walletAddress
+        )
+
+    const user =
+        await getOrCreateUserSnapshot(
+            wallet
+        )
+
+    if (user.tutorialCompleted) {
+        return user
+    }
+
+    const snapshot = {
+        ...user,
+        tutorialCompleted: true
+    }
+
+    await writeDb(
+        `users/${wallet}`,
+        buildStoredUserRecord(snapshot)
+    )
+    await deleteDb(
+        `users/${wallet}/universal`
+    )
+
+    return snapshot
+}
+
 export async function syncUserSnapshot(
     snapshot: UserSnapshot
 ) {
@@ -716,6 +750,9 @@ export async function syncUserSnapshot(
     const mergedSnapshot = mergeIncomingSnapshotWithStored(
         {
             ...cleanSnapshot,
+            tutorialCompleted:
+                cleanSnapshot.tutorialCompleted ||
+                !!storedSnapshot?.tutorialCompleted,
             universal
         },
         storedSnapshot

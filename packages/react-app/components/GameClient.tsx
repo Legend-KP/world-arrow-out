@@ -760,7 +760,7 @@ export default function GameClient() {
             }}
         >
             <iframe
-                src="https://pub-6f2ae15d3de64f8bbe14c921d7de85af.r2.dev/index.html"
+                src="https://pub-dc20f441675048ea9b7645055b8de789.r2.dev/index.html"
                 style={{
                     width: "100%",
                     height: "100%",

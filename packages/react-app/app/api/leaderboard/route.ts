@@ -48,6 +48,56 @@ function parseOptionalPatternName(
     return value.trim()
 }
 
+function pickFirstDefined(
+    ...values: unknown[]
+) {
+    for (const value of values) {
+        if (
+            value !== undefined &&
+            value !== null &&
+            value !== ""
+        ) {
+            return value
+        }
+    }
+
+    return undefined
+}
+
+function resolveRequestedCycleIndex(
+    payload: any
+) {
+    return parseOptionalCycleIndex(
+        pickFirstDefined(
+            payload?.cycleIndex,
+            payload?.weeklyChallengeCycleIndex,
+            payload?.challengeCycleIndex,
+            payload?.challenge?.cycleIndex,
+            payload?.challenge
+                ?.weeklyChallengeCycleIndex,
+            payload?.universal
+                ?.weeklyChallengeCycleIndex,
+            payload?.snapshot?.universal
+                ?.weeklyChallengeCycleIndex,
+            payload?.playerChallenge
+                ?.streakCycleIndex
+        )
+    )
+}
+
+function resolveRequestedPatternName(
+    payload: any
+) {
+    return parseOptionalPatternName(
+        pickFirstDefined(
+            payload?.patternName,
+            payload?.challengePatternName,
+            payload?.challenge?.patternName,
+            payload?.challenge?.name
+        )
+    )
+}
+
 function clampLimit(
     value: unknown
 ) {
@@ -80,12 +130,14 @@ export async function POST(
             const playerName =
                 body.playerName ||
                 "Guest"
-            const cycleIndex = Number(
-                body.cycleIndex || 0
-            )
+            const cycleIndex =
+                resolveRequestedCycleIndex(
+                    body
+                ) ?? 0
             const patternName =
-                body.patternName ||
-                "Unknown"
+                resolveRequestedPatternName(
+                    body
+                ) || "Unknown"
             const completionSeconds = Number(
                 body.completionSeconds || 0
             )
@@ -154,6 +206,8 @@ export async function POST(
                 result,
                 challenge:
                     playResult.snapshot.challenge,
+                cycleIndex,
+                patternName,
                 chancesLeft:
                     playResult.snapshot.challenge
                         .chances
@@ -162,12 +216,12 @@ export async function POST(
 
         if (action === "get") {
             const cycleIndex =
-                parseOptionalCycleIndex(
-                    body.cycleIndex
+                resolveRequestedCycleIndex(
+                    body
                 )
             const patternName =
-                parseOptionalPatternName(
-                    body.patternName
+                resolveRequestedPatternName(
+                    body
                 )
             const limit = clampLimit(
                 body.limit

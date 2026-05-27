@@ -10,6 +10,7 @@ import {
     getOrCreateUserSnapshot,
     recordChallengePlay
 } from "@/lib/server-user-state"
+import { readDb } from "@/lib/firebase-server"
 
 import { normalizeWalletAddress } from "@/lib/walletAddress"
 
@@ -303,14 +304,27 @@ export async function POST(
         }
 
         if (action === "get") {
-            const cycleIndex =
-                resolveRequestedCycleIndex(
-                    body
+            const storedState =
+                await readDb<any>(
+                    "universal/currentChallenge"
                 )
+            const cycleIndex = Number(
+                storedState?.leaderboardCycleIndex ??
+                    resolveRequestedCycleIndex(
+                        body
+                    ) ??
+                    0
+            )
             const patternName =
+                (typeof storedState?.leaderboardPatternName ===
+                    "string" &&
+                storedState.leaderboardPatternName.trim()
+                    ? storedState.leaderboardPatternName.trim()
+                    : null) ||
                 resolveRequestedPatternName(
                     body
-                )
+                ) ||
+                "Unknown"
             const limit = clampLimit(
                 body.limit
             )

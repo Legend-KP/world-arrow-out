@@ -316,44 +316,79 @@ export async function submitChallengeScore(
 }
 
 export async function getChallengeLeaderboard(
-    cycleIndex: number,
-    patternName: string,
+    cycleIndex: number | null,
+    patternName: string | null,
     limit: number =
         MAX_LEADERBOARD_ENTRIES,
     playerWallet?: string
 ) {
-    const normalizedPatternName =
-        normalizePatternName(
-            patternName
-        )
     const safeLimit = clampLimit(
         limit
     )
     const state = await readDb<any>(
         CURRENT_CHALLENGE_PATH
     )
+    const requestedCycleIndex =
+        Number.isFinite(cycleIndex)
+            ? Number(cycleIndex)
+            : null
+    const requestedPatternName =
+        typeof patternName === "string" &&
+        patternName.trim()
+            ? normalizePatternName(
+                  patternName
+              )
+            : null
 
-    if (
-        !state ||
-        !isMatchingCycle(
-            state,
-            cycleIndex,
-            normalizedPatternName
-        )
-    ) {
+    if (!state) {
         return {
             entries: [],
-            playerRank: -1
+            playerRank: -1,
+            cycleIndex: -1,
+            patternName: "Unknown"
         }
     }
+
+    const stateCycleIndex = Number(
+        state?.leaderboardCycleIndex ?? -1
+    )
+    const statePatternName =
+        normalizePatternName(
+            String(
+                state?.leaderboardPatternName ||
+                ""
+            )
+        )
+
+    const shouldUseRequestedCycle =
+        requestedCycleIndex !== null &&
+        !!requestedPatternName &&
+        isMatchingCycle(
+            state,
+            requestedCycleIndex,
+            requestedPatternName
+        )
 
     const entries = mapToSortedEntries(
         state?.leaderboard
     ).slice(0, safeLimit)
-    const normalizedPlayerWallet =
-        normalizeWalletAddress(
-            playerWallet || ""
-        ).toLowerCase()
+
+    let normalizedPlayerWallet = ""
+
+    if (
+        typeof playerWallet ===
+            "string" &&
+        playerWallet.trim()
+    ) {
+        try {
+            normalizedPlayerWallet =
+                normalizeWalletAddress(
+                    playerWallet
+                ).toLowerCase()
+        } catch {
+            normalizedPlayerWallet = ""
+        }
+    }
 
     const playerRank =
         normalizedPlayerWallet
@@ -369,6 +404,14 @@ export async function getChallengeLeaderboard(
         playerRank:
             playerRank > 0
                 ? playerRank
-                : -1
+                : -1,
+        cycleIndex:
+            shouldUseRequestedCycle
+                ? requestedCycleIndex
+                : stateCycleIndex,
+        patternName:
+            shouldUseRequestedCycle
+                ? requestedPatternName
+                : statePatternName
     }
 }

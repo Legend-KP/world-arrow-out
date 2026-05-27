@@ -15,6 +15,39 @@ import { normalizeWalletAddress } from "@/lib/walletAddress"
 
 const MAX_LEADERBOARD_ENTRIES = 25
 
+function parseOptionalCycleIndex(
+    value: unknown
+) {
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return null
+    }
+
+    const numericValue = Number(
+        value
+    )
+
+    return Number.isFinite(numericValue)
+        ? Math.floor(numericValue)
+        : null
+}
+
+function parseOptionalPatternName(
+    value: unknown
+) {
+    if (
+        typeof value !== "string" ||
+        !value.trim()
+    ) {
+        return null
+    }
+
+    return value.trim()
+}
+
 function clampLimit(
     value: unknown
 ) {
@@ -128,12 +161,14 @@ export async function POST(
         }
 
         if (action === "get") {
-            const cycleIndex = Number(
-                body.cycleIndex || 0
-            )
+            const cycleIndex =
+                parseOptionalCycleIndex(
+                    body.cycleIndex
+                )
             const patternName =
-                body.patternName ||
-                "Unknown"
+                parseOptionalPatternName(
+                    body.patternName
+                )
             const limit = clampLimit(
                 body.limit
             )
@@ -176,6 +211,10 @@ export async function POST(
                     leaderboard.entries,
                 playerRank:
                     leaderboard.playerRank,
+                cycleIndex:
+                    leaderboard.cycleIndex,
+                patternName:
+                    leaderboard.patternName,
                 playerChallenge,
                 chancesLeft:
                     playerChallenge?.chances ??

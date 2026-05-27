@@ -286,6 +286,8 @@ export async function submitChallengeScore(
     await patchDb(
         CURRENT_CHALLENGE_PATH,
         {
+            weeklyChallengeCycleIndex:
+                cycleIndex,
             leaderboardCycleIndex:
                 cycleIndex,
             leaderboardPatternName:
@@ -372,23 +374,12 @@ export async function getChallengeLeaderboard(
             requestedPatternName
         )
 
-    if (
-        hasRequestedCycleContext &&
-        !shouldUseRequestedCycle
-    ) {
-        return {
-            entries: [],
-            playerRank: -1,
-            cycleIndex:
-                requestedCycleIndex,
-            patternName:
-                requestedPatternName
-        }
-    }
-
-    const entries = mapToSortedEntries(
-        state?.leaderboard
-    ).slice(0, safeLimit)
+    const entries = shouldUseRequestedCycle ||
+        !hasRequestedCycleContext
+        ? mapToSortedEntries(
+              state?.leaderboard
+          ).slice(0, safeLimit)
+        : []
 
     let normalizedPlayerWallet = ""
 

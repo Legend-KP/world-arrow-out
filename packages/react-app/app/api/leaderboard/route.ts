@@ -127,37 +127,47 @@ function resolveChallengeText(
 function resolveRequestedCycleIndex(
     payload: any
 ) {
-    const fromField =
+    const fromExplicitField =
         parseOptionalCycleIndex(
             pickFirstDefined(
                 payload?.cycleIndex,
-                payload?.weeklyChallengeCycleIndex,
                 payload?.challengeCycleIndex,
                 payload?.challenge?.cycleIndex,
-                payload?.challenge
-                    ?.weeklyChallengeCycleIndex,
-                payload?.universal
-                    ?.weeklyChallengeCycleIndex,
-                payload?.snapshot?.universal
-                    ?.weeklyChallengeCycleIndex,
                 payload?.playerChallenge
                     ?.streakCycleIndex
             )
         )
 
-    if (fromField !== null) {
-        return fromField
+    if (fromExplicitField !== null) {
+        return fromExplicitField
     }
 
-    return extractCycleAndPatternFromText(
+    const fromTitle =
+        extractCycleAndPatternFromText(
+            pickFirstDefined(
+                resolveChallengeText(
+                    payload
+                ),
+                payload?.challenge?.name,
+                payload?.patternName
+            )
+        ).cycleIndex
+
+    if (fromTitle !== null) {
+        return fromTitle
+    }
+
+    return parseOptionalCycleIndex(
         pickFirstDefined(
-            resolveChallengeText(
-                payload
-            ),
-            payload?.challenge?.name,
-            payload?.patternName
+            payload?.weeklyChallengeCycleIndex,
+            payload?.challenge
+                ?.weeklyChallengeCycleIndex,
+            payload?.universal
+                ?.weeklyChallengeCycleIndex,
+            payload?.snapshot?.universal
+                ?.weeklyChallengeCycleIndex
         )
-    ).cycleIndex
+    )
 }
 
 function resolveRequestedPatternName(
@@ -191,22 +201,27 @@ function resolveLeaderboardCycleAndPattern(
     payload: any,
     storedState: any
 ) {
+    const requestedCycle =
+        resolveRequestedCycleIndex(
+            payload
+        )
+    const requestedPattern =
+        resolveRequestedPatternName(
+            payload
+        )
+
     const cycleIndex = Number(
-        storedState?.leaderboardCycleIndex ??
-            resolveRequestedCycleIndex(
-                payload
-            ) ??
+        requestedCycle ??
+            storedState?.leaderboardCycleIndex ??
             0
     )
     const patternName =
+        requestedPattern ||
         (typeof storedState?.leaderboardPatternName ===
             "string" &&
         storedState.leaderboardPatternName.trim()
             ? storedState.leaderboardPatternName.trim()
             : null) ||
-        resolveRequestedPatternName(
-            payload
-        ) ||
         "Unknown"
 
     return {

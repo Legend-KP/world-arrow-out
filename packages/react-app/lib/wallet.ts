@@ -5,8 +5,8 @@ import {
     getCachedWallet
 } from "@/lib/walletAuth"
 import {
-    ensureMiniKitInstalledAsync,
-    getCachedAppId
+    getCachedAppId,
+    waitUntilMiniKitReady
 } from "@/lib/minikitClient"
 
 export async function getWallet(): Promise<Address> {
@@ -26,7 +26,7 @@ export async function getWalletSafe(): Promise<Address | null> {
             return null
         }
 
-        if (!(await ensureMiniKitInstalledAsync())) {
+        if (!(await waitUntilMiniKitReady())) {
             return null
         }
 

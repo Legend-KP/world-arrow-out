@@ -6,9 +6,17 @@ import {
 } from "react"
 
 import {
-    authenticateWallet,
+    authenticateWalletWithRetry,
     getCachedWallet
 } from "@/lib/walletAuth"
+
+import {
+    getMiniKitWarmupDelayMs
+} from "@/lib/platform"
+
+import {
+    waitUntilMiniKitReady
+} from "@/lib/minikitClient"
 
 import {
     sendToUnity
@@ -44,6 +52,23 @@ export default function GameClient() {
             return
 
         initialized.current = true
+
+        void warmBridgeForPlatform()
+
+        async function warmBridgeForPlatform() {
+            await new Promise((resolve) => {
+                setTimeout(
+                    resolve,
+                    getMiniKitWarmupDelayMs()
+                )
+            })
+
+            await waitUntilMiniKitReady()
+
+            console.log(
+                "[Bridge] MiniKit warm-up finished"
+            )
+        }
 
         async function handleMessage(
             event: MessageEvent
@@ -240,9 +265,11 @@ export default function GameClient() {
     }
 
     async function handleBootstrap() {
+        await waitUntilMiniKitReady()
+
         try {
             const wallet =
-                await authenticateWallet()
+                await authenticateWalletWithRetry()
 
             sendToUnity(
                 "OnWalletAddressResolved",
@@ -250,11 +277,39 @@ export default function GameClient() {
             )
 
             await bootstrap(wallet)
+            return
         } catch (error: any) {
             console.error(
-                "Bootstrap failed",
+                "Bootstrap auth failed",
                 error
             )
+
+            const fallbackWallet =
+                getCachedWallet()
+
+            if (fallbackWallet) {
+                try {
+                    console.warn(
+                        "[Bootstrap] using cached wallet after auth failure",
+                        fallbackWallet
+                    )
+
+                    sendToUnity(
+                        "OnWalletAddressResolved",
+                        fallbackWallet
+                    )
+
+                    await bootstrap(
+                        fallbackWallet
+                    )
+                    return
+                } catch (bootstrapError) {
+                    console.error(
+                        "Bootstrap with cached wallet failed",
+                        bootstrapError
+                    )
+                }
+            }
 
             sendToUnity(
                 "OnWalletAddressResolved",
@@ -342,7 +397,7 @@ export default function GameClient() {
             "string" &&
             payload.walletAddress.trim()) ||
             getCachedWallet() ||
-            (await authenticateWallet())
+            (await authenticateWalletWithRetry())
 
         const response =
             await apiPost(

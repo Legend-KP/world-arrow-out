@@ -1,6 +1,18 @@
 import { MiniKit } from "@worldcoin/minikit-js"
 
+import {
+    getMiniKitMaxPollAttempts,
+    getMiniKitPollIntervalMs,
+    isIOSWebView
+} from "@/lib/platform"
+
 let resolvedAppId: string | null = null
+
+function sleep(ms: number) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
+}
 let resolveAppIdPromise: Promise<string> | null =
     null
 
@@ -113,6 +125,62 @@ export async function ensureMiniKitInstalledAsync(): Promise<boolean> {
     }
 
     return MiniKit.isInstalled()
+}
+
+/**
+ * iOS World App often injects MiniKit after the Unity iframe loads.
+ * Poll until install succeeds or timeout.
+ */
+export async function waitUntilMiniKitReady(): Promise<boolean> {
+    if (typeof window === "undefined") {
+        return false
+    }
+
+    const maxAttempts =
+        getMiniKitMaxPollAttempts()
+    const delayMs =
+        getMiniKitPollIntervalMs()
+
+    for (
+        let attempt = 0;
+        attempt < maxAttempts;
+        attempt++
+    ) {
+        if (
+            MiniKit.isInstalled() &&
+            MiniKit.isInWorldApp()
+        ) {
+            return true
+        }
+
+        const installed =
+            await ensureMiniKitInstalledAsync()
+
+        if (
+            installed &&
+            MiniKit.isInWorldApp()
+        ) {
+            return true
+        }
+
+        if (attempt < maxAttempts - 1) {
+            await sleep(delayMs)
+        }
+    }
+
+    console.warn(
+        "[MiniKit] waitUntilMiniKitReady timed out",
+        {
+            ios: isIOSWebView(),
+            installed: MiniKit.isInstalled(),
+            inWorldApp: MiniKit.isInWorldApp()
+        }
+    )
+
+    return (
+        MiniKit.isInstalled() &&
+        MiniKit.isInWorldApp()
+    )
 }
 
 export async function getMiniKitUnavailableMessageAsync(): Promise<string> {

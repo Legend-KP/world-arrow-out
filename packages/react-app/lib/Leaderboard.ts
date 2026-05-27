@@ -360,6 +360,9 @@ export async function getChallengeLeaderboard(
             )
         )
 
+    const hasRequestedCycleContext =
+        requestedCycleIndex !== null &&
+        !!requestedPatternName
     const shouldUseRequestedCycle =
         requestedCycleIndex !== null &&
         !!requestedPatternName &&
@@ -368,6 +371,20 @@ export async function getChallengeLeaderboard(
             requestedCycleIndex,
             requestedPatternName
         )
+
+    if (
+        hasRequestedCycleContext &&
+        !shouldUseRequestedCycle
+    ) {
+        return {
+            entries: [],
+            playerRank: -1,
+            cycleIndex:
+                requestedCycleIndex,
+            patternName:
+                requestedPatternName
+        }
+    }
 
     const entries = mapToSortedEntries(
         state?.leaderboard
@@ -406,11 +423,11 @@ export async function getChallengeLeaderboard(
                 ? playerRank
                 : -1,
         cycleIndex:
-            shouldUseRequestedCycle
+            hasRequestedCycleContext
                 ? requestedCycleIndex
                 : stateCycleIndex,
         patternName:
-            shouldUseRequestedCycle
+            hasRequestedCycleContext
                 ? requestedPatternName
                 : statePatternName
     }

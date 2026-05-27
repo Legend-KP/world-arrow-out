@@ -187,6 +187,34 @@ function resolveRequestedPatternName(
     ).patternName
 }
 
+function resolveLeaderboardCycleAndPattern(
+    payload: any,
+    storedState: any
+) {
+    const cycleIndex = Number(
+        storedState?.leaderboardCycleIndex ??
+            resolveRequestedCycleIndex(
+                payload
+            ) ??
+            0
+    )
+    const patternName =
+        (typeof storedState?.leaderboardPatternName ===
+            "string" &&
+        storedState.leaderboardPatternName.trim()
+            ? storedState.leaderboardPatternName.trim()
+            : null) ||
+        resolveRequestedPatternName(
+            payload
+        ) ||
+        "Unknown"
+
+    return {
+        cycleIndex,
+        patternName
+    }
+}
+
 function clampLimit(
     value: unknown
 ) {
@@ -214,19 +242,23 @@ export async function POST(
             body.action
 
         if (action === "submit") {
+            const storedState =
+                await readDb<any>(
+                    "universal/currentChallenge"
+                )
             const walletAddress =
                 body.walletAddress
             const playerName =
                 body.playerName ||
                 "Guest"
-            const cycleIndex =
-                resolveRequestedCycleIndex(
-                    body
-                ) ?? 0
-            const patternName =
-                resolveRequestedPatternName(
-                    body
-                ) || "Unknown"
+            const {
+                cycleIndex,
+                patternName
+            } =
+                resolveLeaderboardCycleAndPattern(
+                    body,
+                    storedState
+                )
             const completionSeconds = Number(
                 body.completionSeconds || 0
             )
@@ -308,23 +340,14 @@ export async function POST(
                 await readDb<any>(
                     "universal/currentChallenge"
                 )
-            const cycleIndex = Number(
-                storedState?.leaderboardCycleIndex ??
-                    resolveRequestedCycleIndex(
-                        body
-                    ) ??
-                    0
-            )
-            const patternName =
-                (typeof storedState?.leaderboardPatternName ===
-                    "string" &&
-                storedState.leaderboardPatternName.trim()
-                    ? storedState.leaderboardPatternName.trim()
-                    : null) ||
-                resolveRequestedPatternName(
-                    body
-                ) ||
-                "Unknown"
+            const {
+                cycleIndex,
+                patternName
+            } =
+                resolveLeaderboardCycleAndPattern(
+                    body,
+                    storedState
+                )
             const limit = clampLimit(
                 body.limit
             )

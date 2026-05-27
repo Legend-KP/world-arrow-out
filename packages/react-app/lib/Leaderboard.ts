@@ -49,24 +49,6 @@ function clampLimit(
     )
 }
 
-function isMatchingCycle(
-    state: any,
-    cycleIndex: number,
-    patternName: string
-) {
-    return (
-        Number(
-            state?.leaderboardCycleIndex ?? -1
-        ) === cycleIndex &&
-        normalizePatternName(
-            String(
-                state?.leaderboardPatternName ||
-                ""
-            )
-        ) === patternName
-    )
-}
-
 function sortEntries(
     entries: StoredLeaderboardEntry[]
 ) {
@@ -182,6 +164,42 @@ function toStoredLeaderboard(
     return leaderboard
 }
 
+function isNewChallengeWeek(
+    state: any,
+    cycleIndex: number,
+    normalizedPatternName: string
+) {
+    const storedCycle = Number(
+        state?.leaderboardCycleIndex ?? -1
+    )
+    const storedPattern =
+        normalizePatternName(
+            String(
+                state?.leaderboardPatternName ||
+                ""
+            )
+        )
+    const hasLeaderboardData =
+        !!state?.leaderboard &&
+        typeof state.leaderboard ===
+            "object" &&
+        Object.keys(state.leaderboard)
+            .length > 0
+
+    if (
+        !hasLeaderboardData &&
+        storedCycle < 0
+    ) {
+        return false
+    }
+
+    return (
+        storedCycle !== cycleIndex ||
+        storedPattern !==
+            normalizedPatternName
+    )
+}
+
 export async function submitChallengeScore(
     walletAddress: string,
     playerName: string,
@@ -226,11 +244,12 @@ export async function submitChallengeScore(
         CURRENT_CHALLENGE_PATH
     )
 
-    const cycleMatches = isMatchingCycle(
-        state,
-        cycleIndex,
-        normalizedPatternName
-    )
+    const newChallengeWeek =
+        isNewChallengeWeek(
+            state,
+            cycleIndex,
+            normalizedPatternName
+        )
 
     console.log(
         "[Leaderboard] submit cycle check",
@@ -242,16 +261,18 @@ export async function submitChallengeScore(
                 state?.leaderboardCycleIndex,
             storedPattern:
                 state?.leaderboardPatternName,
-            matches: cycleMatches
+            newChallengeWeek,
+            existingEntryCount: Object.keys(
+                state?.leaderboard || {}
+            ).length
         }
     )
 
-    const currentEntries =
-        cycleMatches
-            ? mapToSortedEntries(
-                  state?.leaderboard
-              )
-            : []
+    const currentEntries = newChallengeWeek
+        ? []
+        : mapToSortedEntries(
+              state?.leaderboard
+          )
 
     const existingEntry =
         currentEntries.find(
@@ -338,8 +359,6 @@ export async function submitChallengeScore(
 }
 
 export async function getChallengeLeaderboard(
-    cycleIndex: number | null,
-    patternName: string | null,
     limit: number =
         MAX_LEADERBOARD_ENTRIES,
     playerWallet?: string
@@ -350,24 +369,13 @@ export async function getChallengeLeaderboard(
     const state = await readDb<any>(
         CURRENT_CHALLENGE_PATH
     )
-    const requestedCycleIndex =
-        Number.isFinite(cycleIndex)
-            ? Number(cycleIndex)
-            : null
-    const requestedPatternName =
-        typeof patternName === "string" &&
-        patternName.trim()
-            ? normalizePatternName(
-                  patternName
-              )
-            : null
 
     if (!state) {
         return {
             entries: [],
             playerRank: -1,
             cycleIndex: -1,
-            patternName: "Unknown"
+            patternName: "unknown"
         }
     }
 
@@ -382,24 +390,18 @@ export async function getChallengeLeaderboard(
             )
         )
 
-    const hasRequestedCycleContext =
-        requestedCycleIndex !== null &&
-        !!requestedPatternName
-    const shouldUseRequestedCycle =
-        requestedCycleIndex !== null &&
-        !!requestedPatternName &&
-        isMatchingCycle(
-            state,
-            requestedCycleIndex,
-            requestedPatternName
-        )
+    const entries = mapToSortedEntries(
+        state?.leaderboard
+    ).slice(0, safeLimit)
 
-    const entries = shouldUseRequestedCycle ||
-        !hasRequestedCycleContext
-        ? mapToSortedEntries(
-              state?.leaderboard
-          ).slice(0, safeLimit)
-        : []
+    console.log(
+        "[Leaderboard] get",
+        {
+            storedCycle: stateCycleIndex,
+            storedPattern: statePatternName,
+            entryCount: entries.length
+        }
+    )
 
     let normalizedPlayerWallet = ""
 
@@ -433,13 +435,7 @@ export async function getChallengeLeaderboard(
             playerRank > 0
                 ? playerRank
                 : -1,
-        cycleIndex:
-            hasRequestedCycleContext
-                ? requestedCycleIndex
-                : stateCycleIndex,
-        patternName:
-            hasRequestedCycleContext
-                ? requestedPatternName
-                : statePatternName
+        cycleIndex: stateCycleIndex,
+        patternName: statePatternName
     }
 }

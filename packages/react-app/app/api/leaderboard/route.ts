@@ -198,10 +198,104 @@ function resolveRequestedPatternName(
     ).patternName
 }
 
+function hasExplicitLeaderboardContext(
+    payload: any
+) {
+    return (
+        parseOptionalCycleIndex(
+            payload?.cycleIndex
+        ) !== null &&
+        !!parseOptionalPatternName(
+            payload?.patternName
+        )
+    )
+}
+
 function resolveLeaderboardCycleAndPattern(
     payload: any,
     storedState: any
 ) {
+    if (
+        hasExplicitLeaderboardContext(
+            payload
+        )
+    ) {
+        return {
+            cycleIndex: Number(
+                parseOptionalCycleIndex(
+                    payload.cycleIndex
+                )
+            ),
+            patternName:
+                normalizePatternName(
+                    String(
+                        payload.patternName
+                    )
+                )
+        }
+    }
+
+    const titleContext =
+        extractCycleAndPatternFromText(
+            resolveChallengeText(
+                payload
+            )
+        )
+
+    if (
+        titleContext.cycleIndex !==
+            null &&
+        titleContext.patternName
+    ) {
+        return {
+            cycleIndex:
+                titleContext.cycleIndex,
+            patternName:
+                titleContext.patternName
+        }
+    }
+
+    const storedCycle =
+        parseOptionalCycleIndex(
+            storedState?.leaderboardCycleIndex
+        )
+    const storedPattern =
+        typeof storedState?.leaderboardPatternName ===
+            "string" &&
+        storedState.leaderboardPatternName.trim()
+            ? normalizePatternName(
+                  storedState.leaderboardPatternName
+              )
+            : null
+    const hasStoredLeaderboard =
+        !!storedState?.leaderboard &&
+        typeof storedState.leaderboard ===
+            "object" &&
+        Object.keys(
+            storedState.leaderboard
+        ).length > 0
+
+    if (
+        hasStoredLeaderboard &&
+        storedCycle !== null &&
+        storedPattern
+    ) {
+        return {
+            cycleIndex: storedCycle,
+            patternName: storedPattern
+        }
+    }
+
+    if (
+        storedCycle !== null &&
+        storedPattern
+    ) {
+        return {
+            cycleIndex: storedCycle,
+            patternName: storedPattern
+        }
+    }
+
     const requestedCycle =
         resolveRequestedCycleIndex(
             payload
@@ -211,24 +305,15 @@ function resolveLeaderboardCycleAndPattern(
             payload
         )
 
-    const cycleIndex = Number(
-        requestedCycle ??
-            storedState?.leaderboardCycleIndex ??
-            0
-    )
-    const patternName =
-        normalizePatternName(
-            requestedPattern ||
-                (typeof storedState?.leaderboardPatternName ===
-                "string"
-                    ? storedState.leaderboardPatternName
-                    : "") ||
-                "unknown"
-        )
-
     return {
-        cycleIndex,
-        patternName
+        cycleIndex: Number(
+            requestedCycle ?? 0
+        ),
+        patternName:
+            normalizePatternName(
+                requestedPattern ||
+                    "unknown"
+            )
     }
 }
 
@@ -353,18 +438,6 @@ export async function POST(
         }
 
         if (action === "get") {
-            const storedState =
-                await readDb<any>(
-                    "universal/currentChallenge"
-                )
-            const {
-                cycleIndex,
-                patternName
-            } =
-                resolveLeaderboardCycleAndPattern(
-                    body,
-                    storedState
-                )
             const limit = clampLimit(
                 body.limit
             )
@@ -373,8 +446,6 @@ export async function POST(
 
             const leaderboard =
                 await getChallengeLeaderboard(
-                    cycleIndex,
-                    patternName,
                     limit,
                     playerWallet
                 )

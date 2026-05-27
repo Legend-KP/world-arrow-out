@@ -72,6 +72,10 @@ export default function GameClient() {
                         )
                         break
 
+                    case "MINIPAY_REQUEST_STATUS":
+                        await handleRequestStatus()
+                        break
+
                     case "MINIPAY_PURCHASE_GAME":
                         await handlePurchaseGame()
                         break
@@ -97,6 +101,19 @@ export default function GameClient() {
 
                     case "MINIPAY_GET_LEADERBOARD":
                         await handleGetLeaderboard(
+                            data.payload
+                        )
+                        break
+
+                    case "MINIPAY_DEBUG_ECHO":
+                        console.log(
+                            "[Unity Debug]",
+                            JSON.stringify(
+                                data.payload
+                            )
+                        )
+                        sendToUnity(
+                            "OnDebugEcho",
                             data.payload
                         )
                         break
@@ -154,20 +171,38 @@ export default function GameClient() {
             )
         }
 
+        const snap = response.snapshot
+        const tutDone =
+            !!snap?.tutorialCompleted
+
         const formatted =
-            formatSnapshotForUnity(
-                response.snapshot
-            )
+            formatSnapshotForUnity(snap)
 
         sendToUnity(
             "OnBootstrapDataReceived",
             formatted
         )
 
-        sendTutorialStatusToUnity(
-            sendToUnity,
-            !!response.snapshot
-                ?.tutorialCompleted
+        // Redundant targeted callbacks so Unity can listen on any of them
+        sendToUnity(
+            "OnTutorialCompleted",
+            tutDone ? "true" : "false"
+        )
+        sendToUnity(
+            "OnTutorialStatus",
+            tutDone ? "1" : "0"
+        )
+        sendToUnity(
+            "OnTutorialCompletedBool",
+            tutDone
+        )
+
+        // Log so we can confirm in Cloudflare / browser console
+        console.log(
+            "[Bootstrap] tutorialCompleted =",
+            tutDone,
+            "| wallet =",
+            wallet
         )
     }
 
@@ -337,6 +372,69 @@ export default function GameClient() {
             sendToUnity,
             true
         )
+    }
+
+    async function handleRequestStatus() {
+        try {
+            const wallet =
+                getCachedWallet()
+
+            if (!wallet) {
+                sendToUnity(
+                    "OnStatusError",
+                    "No wallet connected"
+                )
+                return
+            }
+
+            const response =
+                await apiPost(
+                    "/api/bootstrap",
+                    {
+                        walletAddress: wallet
+                    }
+                )
+
+            if (!response.success) {
+                sendToUnity(
+                    "OnStatusError",
+                    response.error
+                )
+                return
+            }
+
+            const snap = response.snapshot
+            const tutDone =
+                !!snap?.tutorialCompleted
+            const purchased =
+                !!snap?.hasPurchasedGame
+
+            sendToUnity(
+                "OnTutorialCompleted",
+                tutDone ? "true" : "false"
+            )
+            sendToUnity(
+                "OnTutorialStatus",
+                tutDone ? "1" : "0"
+            )
+            sendToUnity(
+                "OnTutorialCompletedBool",
+                tutDone
+            )
+            sendToUnity(
+                "OnPurchaseStatus",
+                purchased ? "1" : "0"
+            )
+            sendToUnity(
+                "OnStatusReceived",
+                formatSnapshotForUnity(snap)
+            )
+        } catch (error: any) {
+            sendToUnity(
+                "OnStatusError",
+                error?.message || "Status check failed"
+            )
+        }
     }
 
     async function handlePurchaseGame() {

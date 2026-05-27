@@ -64,38 +64,126 @@ function pickFirstDefined(
     return undefined
 }
 
+function extractCycleAndPatternFromText(
+    value: unknown
+) {
+    if (typeof value !== "string") {
+        return {
+            cycleIndex: null as number | null,
+            patternName: null as string | null
+        }
+    }
+
+    const text = value.trim()
+
+    if (!text) {
+        return {
+            cycleIndex: null as number | null,
+            patternName: null as string | null
+        }
+    }
+
+    const match = text.match(
+        /challenge\s*#\s*(\d+)(?:\s*[-:]\s*([a-z0-9 _-]+))?/i
+    )
+
+    if (!match) {
+        return {
+            cycleIndex: null as number | null,
+            patternName: null as string | null
+        }
+    }
+
+    const parsedCycle = parseOptionalCycleIndex(
+        match[1]
+    )
+    const parsedPattern =
+        parseOptionalPatternName(
+            match[2]
+        )
+
+    return {
+        cycleIndex: parsedCycle,
+        patternName: parsedPattern
+    }
+}
+
+function resolveChallengeText(
+    payload: any
+) {
+    return pickFirstDefined(
+        payload?.challengeTitle,
+        payload?.weeklyChallengeTitle,
+        payload?.title,
+        payload?.headerText,
+        payload?.challenge?.title,
+        payload?.challenge?.label,
+        payload?.challengeLabel,
+        payload?.challengeDisplayName
+    )
+}
+
 function resolveRequestedCycleIndex(
     payload: any
 ) {
-    return parseOptionalCycleIndex(
-        pickFirstDefined(
-            payload?.cycleIndex,
-            payload?.weeklyChallengeCycleIndex,
-            payload?.challengeCycleIndex,
-            payload?.challenge?.cycleIndex,
-            payload?.challenge
-                ?.weeklyChallengeCycleIndex,
-            payload?.universal
-                ?.weeklyChallengeCycleIndex,
-            payload?.snapshot?.universal
-                ?.weeklyChallengeCycleIndex,
-            payload?.playerChallenge
-                ?.streakCycleIndex
+    const fromField =
+        parseOptionalCycleIndex(
+            pickFirstDefined(
+                payload?.cycleIndex,
+                payload?.weeklyChallengeCycleIndex,
+                payload?.challengeCycleIndex,
+                payload?.challenge?.cycleIndex,
+                payload?.challenge
+                    ?.weeklyChallengeCycleIndex,
+                payload?.universal
+                    ?.weeklyChallengeCycleIndex,
+                payload?.snapshot?.universal
+                    ?.weeklyChallengeCycleIndex,
+                payload?.playerChallenge
+                    ?.streakCycleIndex
+            )
         )
-    )
+
+    if (fromField !== null) {
+        return fromField
+    }
+
+    return extractCycleAndPatternFromText(
+        pickFirstDefined(
+            resolveChallengeText(
+                payload
+            ),
+            payload?.challenge?.name,
+            payload?.patternName
+        )
+    ).cycleIndex
 }
 
 function resolveRequestedPatternName(
     payload: any
 ) {
-    return parseOptionalPatternName(
+    const fromField =
+        parseOptionalPatternName(
+            pickFirstDefined(
+                payload?.patternName,
+                payload?.challengePatternName,
+                payload?.challenge?.patternName,
+                payload?.challenge?.name
+            )
+        )
+
+    if (fromField) {
+        return fromField
+    }
+
+    return extractCycleAndPatternFromText(
         pickFirstDefined(
-            payload?.patternName,
-            payload?.challengePatternName,
-            payload?.challenge?.patternName,
+            resolveChallengeText(
+                payload
+            ),
             payload?.challenge?.name
         )
-    )
+    ).patternName
 }
 
 function clampLimit(

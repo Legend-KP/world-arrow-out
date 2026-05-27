@@ -25,12 +25,16 @@ interface StoredLeaderboardEntry {
     updatedAt: number
 }
 
-function normalizePatternName(
+export function normalizePatternName(
     patternName: string
 ) {
-    return (
-        patternName || "Unknown"
-    ).trim() || "Unknown"
+    const normalized = (
+        patternName || "unknown"
+    )
+        .trim()
+        .toLowerCase()
+
+    return normalized || "unknown"
 }
 
 function clampLimit(
@@ -222,12 +226,28 @@ export async function submitChallengeScore(
         CURRENT_CHALLENGE_PATH
     )
 
+    const cycleMatches = isMatchingCycle(
+        state,
+        cycleIndex,
+        normalizedPatternName
+    )
+
+    console.log(
+        "[Leaderboard] submit cycle check",
+        {
+            requestedCycle: cycleIndex,
+            requestedPattern:
+                normalizedPatternName,
+            storedCycle:
+                state?.leaderboardCycleIndex,
+            storedPattern:
+                state?.leaderboardPatternName,
+            matches: cycleMatches
+        }
+    )
+
     const currentEntries =
-        isMatchingCycle(
-            state,
-            cycleIndex,
-            normalizedPatternName
-        )
+        cycleMatches
             ? mapToSortedEntries(
                   state?.leaderboard
               )

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 
 import {
     submitChallengeScore,
-    getChallengeLeaderboard
+    getChallengeLeaderboard,
+    normalizePatternName
 } from "@/lib/Leaderboard"
 
 import {
@@ -46,7 +47,7 @@ function parseOptionalPatternName(
         return null
     }
 
-    return value.trim()
+    return value.trim().toLowerCase()
 }
 
 function pickFirstDefined(
@@ -216,13 +217,14 @@ function resolveLeaderboardCycleAndPattern(
             0
     )
     const patternName =
-        requestedPattern ||
-        (typeof storedState?.leaderboardPatternName ===
-            "string" &&
-        storedState.leaderboardPatternName.trim()
-            ? storedState.leaderboardPatternName.trim()
-            : null) ||
-        "Unknown"
+        normalizePatternName(
+            requestedPattern ||
+                (typeof storedState?.leaderboardPatternName ===
+                "string"
+                    ? storedState.leaderboardPatternName
+                    : "") ||
+                "unknown"
+        )
 
     return {
         cycleIndex,

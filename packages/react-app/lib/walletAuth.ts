@@ -156,7 +156,7 @@ async function runWalletAuthentication(): Promise<string> {
                 }
 
                 signedPayload =
-                    result.data
+                    result.data as MiniAppWalletAuthSuccessPayload
             }
 
             const response =

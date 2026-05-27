@@ -327,11 +327,8 @@ function mergeDecreasingCounter(
         Number(stored)
     )
 
-    if (inc <= st) {
-        return inc
-    }
-
-    return st
+    // Always trust the client — it may have spent (lower) or purchased (higher).
+    return inc
 }
 
 function mergeHints(

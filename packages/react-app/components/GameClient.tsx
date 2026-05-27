@@ -243,23 +243,25 @@ export default function GameClient() {
             )
 
         if (
+            !normalizedSnapshot.tutorialCompleted &&
             extractTutorialCompletedFromPayload(
                 snapshot
             )
         ) {
+            normalizedSnapshot.tutorialCompleted = true
+
             const wallet =
                 normalizedSnapshot.walletAddress
 
             if (wallet) {
-                await apiPost(
+                // Fire-and-forget — don't block sync
+                apiPost(
                     "/api/tutorial/complete",
                     {
                         walletAddress: wallet
                     }
-                )
+                ).catch(() => {})
             }
-
-            normalizedSnapshot.tutorialCompleted = true
         }
 
         const response =
@@ -287,10 +289,13 @@ export default function GameClient() {
             formatted
         )
 
+        const tutCompleted =
+            !!response.snapshot?.tutorialCompleted ||
+            !!normalizedSnapshot.tutorialCompleted
+
         sendTutorialStatusToUnity(
             sendToUnity,
-            !!response.snapshot
-                ?.tutorialCompleted
+            tutCompleted
         )
     }
 
@@ -308,8 +313,7 @@ export default function GameClient() {
             await apiPost(
                 "/api/tutorial/complete",
                 {
-                    walletAddress: wallet,
-                    ...payload
+                    walletAddress: wallet
                 }
             )
 

@@ -24,15 +24,33 @@ export async function POST(
         const storedNonce =
             cookieStore.get("siwe")?.value
 
-        if (
-            !nonce ||
-            !storedNonce ||
-            nonce !== storedNonce
-        ) {
+        if (!nonce || !storedNonce) {
             return NextResponse.json(
                 {
                     isValid: false,
-                    error: "Invalid nonce"
+                    error:
+                        "Missing nonce — sign in again"
+                },
+                {
+                    status: 400
+                }
+            )
+        }
+
+        if (nonce !== storedNonce) {
+            console.error(
+                "SIWE cookie nonce mismatch",
+                {
+                    body: nonce,
+                    cookie: storedNonce
+                }
+            )
+
+            return NextResponse.json(
+                {
+                    isValid: false,
+                    error:
+                        "Session expired — please sign in again"
                 },
                 {
                     status: 400

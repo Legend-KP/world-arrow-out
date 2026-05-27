@@ -8,15 +8,15 @@ import { apiPost } from "@/lib/api"
 import { normalizeMiniKitPayError } from "@/lib/minikitErrors"
 import { normalizeWalletAddress } from "@/lib/walletAddress"
 import {
-    ensureMiniKitInstalledAsync,
-    getMiniKitUnavailableMessageAsync
+    getMiniKitUnavailableMessageAsync,
+    waitUntilMiniKitReady
 } from "@/lib/minikitClient"
 
 export async function miniKitPay(
     amount: string,
     description: string
 ): Promise<string> {
-    if (!(await ensureMiniKitInstalledAsync())) {
+    if (!(await waitUntilMiniKitReady())) {
         throw new Error(
             await getMiniKitUnavailableMessageAsync()
         )

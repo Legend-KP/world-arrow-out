@@ -22,6 +22,7 @@ export async function apiPost(
         headers: {
             "Content-Type": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify(cleaned)
     })
 

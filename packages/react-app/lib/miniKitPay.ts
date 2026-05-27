@@ -22,16 +22,21 @@ export async function miniKitPay(
         )
     }
 
-    const initiate =
-        await apiPost(
-            "/api/payment/initiate"
-        )
+    console.log(
+        "[Pay] MiniKit ready, initiating payment..."
+    )
 
+    const initiate =
+        await apiPost("/api/payment/initiate")
     const reference =
         initiate.reference as string
-
     const receivingWallet =
         initiate.receivingWallet as string
+
+    console.log(
+        "[Pay] Initiate response:",
+        { reference, receivingWallet }
+    )
 
     if (!reference || !receivingWallet) {
         throw new Error(
@@ -40,6 +45,10 @@ export async function miniKitPay(
     }
 
     try {
+        console.log(
+            "[Pay] Calling MiniKit.pay()..."
+        )
+
         const result =
             await MiniKit.pay({
                 reference,
@@ -62,6 +71,15 @@ export async function miniKitPay(
                 }
             })
 
+        console.log(
+            "[Pay] MiniKit.pay() result:",
+            {
+                executedWith:
+                    result.executedWith,
+                hasData: !!result.data
+            }
+        )
+
         if (
             result.executedWith !==
             "minikit"
@@ -71,6 +89,10 @@ export async function miniKitPay(
             )
         }
 
+        console.log(
+            "[Pay] Calling /api/payment/verify..."
+        )
+
         const verifyResponse =
             await apiPost(
                 "/api/payment/verify",
@@ -79,6 +101,17 @@ export async function miniKitPay(
                     payload: result.data
                 }
             )
+
+        console.log(
+            "[Pay] Verify response:",
+            {
+                success:
+                    verifyResponse.success,
+                verifiedBy:
+                    verifyResponse.verifiedBy,
+                error: verifyResponse.error
+            }
+        )
 
         if (!verifyResponse.success) {
             throw new Error(
@@ -101,6 +134,10 @@ export async function miniKitPay(
             payer
         )
     } catch (error) {
+        console.error(
+            "[Pay] Error:",
+            error
+        )
         throw new Error(
             normalizeMiniKitPayError(error)
         )

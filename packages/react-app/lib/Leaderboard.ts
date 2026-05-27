@@ -327,8 +327,6 @@ export async function submitChallengeScore(
     await patchDb(
         CURRENT_CHALLENGE_PATH,
         {
-            weeklyChallengeCycleIndex:
-                cycleIndex,
             leaderboardCycleIndex:
                 cycleIndex,
             leaderboardPatternName:

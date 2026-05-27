@@ -665,6 +665,16 @@ export default function GameClient() {
             sendToUnity(
                 "OnLeaderboardSubmitted",
                 JSON.stringify({
+                    entries:
+                        response.result?.entries ??
+                        [],
+                    playerRank:
+                        response.result?.playerRank ??
+                        -1,
+                    cycleIndex:
+                        response.cycleIndex,
+                    patternName:
+                        response.patternName,
                     chancesLeft:
                         response.chancesLeft,
                     challenge:

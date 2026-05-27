@@ -198,60 +198,26 @@ function resolveRequestedPatternName(
     ).patternName
 }
 
-function hasExplicitLeaderboardContext(
-    payload: any
-) {
-    return (
-        parseOptionalCycleIndex(
-            payload?.cycleIndex
-        ) !== null &&
-        !!parseOptionalPatternName(
-            payload?.patternName
-        )
-    )
-}
-
 function resolveLeaderboardCycleAndPattern(
     payload: any,
     storedState: any
 ) {
-    if (
-        hasExplicitLeaderboardContext(
+    const cycle =
+        resolveRequestedCycleIndex(
             payload
         )
-    ) {
-        return {
-            cycleIndex: Number(
-                parseOptionalCycleIndex(
-                    payload.cycleIndex
-                )
-            ),
-            patternName:
-                normalizePatternName(
-                    String(
-                        payload.patternName
-                    )
-                )
-        }
-    }
-
-    const titleContext =
-        extractCycleAndPatternFromText(
-            resolveChallengeText(
-                payload
-            )
+    const pattern =
+        resolveRequestedPatternName(
+            payload
         )
 
-    if (
-        titleContext.cycleIndex !==
-            null &&
-        titleContext.patternName
-    ) {
+    if (cycle !== null && pattern) {
         return {
-            cycleIndex:
-                titleContext.cycleIndex,
+            cycleIndex: Number(cycle),
             patternName:
-                titleContext.patternName
+                normalizePatternName(
+                    pattern
+                )
         }
     }
 
@@ -296,24 +262,9 @@ function resolveLeaderboardCycleAndPattern(
         }
     }
 
-    const requestedCycle =
-        resolveRequestedCycleIndex(
-            payload
-        )
-    const requestedPattern =
-        resolveRequestedPatternName(
-            payload
-        )
-
     return {
-        cycleIndex: Number(
-            requestedCycle ?? 0
-        ),
-        patternName:
-            normalizePatternName(
-                requestedPattern ||
-                    "unknown"
-            )
+        cycleIndex: 0,
+        patternName: "unknown"
     }
 }
 

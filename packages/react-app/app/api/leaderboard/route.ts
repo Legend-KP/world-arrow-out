@@ -342,30 +342,6 @@ export async function POST(
                         ? body.challenge.chances
                         : undefined
 
-            const playResult =
-                await recordChallengePlay(
-                    walletAddress,
-                    completionSeconds,
-                    chancesAfterPlay
-                )
-
-            if (!playResult.success) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        error:
-                            playResult.error ||
-                            "No chances left",
-                        chancesLeft:
-                            playResult.snapshot
-                                .challenge.chances
-                    },
-                    {
-                        status: 400
-                    }
-                )
-            }
-
             const result =
                 await submitChallengeScore(
                     walletAddress,
@@ -375,16 +351,38 @@ export async function POST(
                     completionSeconds
                 )
 
+            let playSnapshot = null
+            let chancesLeft = null
+
+            try {
+                const playResult =
+                    await recordChallengePlay(
+                        walletAddress,
+                        completionSeconds,
+                        chancesAfterPlay
+                    )
+
+                playSnapshot =
+                    playResult.snapshot ?? null
+                chancesLeft =
+                    playResult.snapshot?.challenge
+                        ?.chances ?? null
+            } catch (playError) {
+                console.warn(
+                    "recordChallengePlay failed after leaderboard submit",
+                    playError
+                )
+            }
+
             return NextResponse.json({
                 success: true,
                 result,
                 challenge:
-                    playResult.snapshot.challenge,
+                    playSnapshot?.challenge ??
+                    null,
                 cycleIndex,
                 patternName,
-                chancesLeft:
-                    playResult.snapshot.challenge
-                        .chances
+                chancesLeft
             })
         }
 

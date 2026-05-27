@@ -202,25 +202,6 @@ function resolveLeaderboardCycleAndPattern(
     payload: any,
     storedState: any
 ) {
-    const cycle =
-        resolveRequestedCycleIndex(
-            payload
-        )
-    const pattern =
-        resolveRequestedPatternName(
-            payload
-        )
-
-    if (cycle !== null && pattern) {
-        return {
-            cycleIndex: Number(cycle),
-            patternName:
-                normalizePatternName(
-                    pattern
-                )
-        }
-    }
-
     const storedCycle =
         parseOptionalCycleIndex(
             storedState?.leaderboardCycleIndex
@@ -242,7 +223,6 @@ function resolveLeaderboardCycleAndPattern(
         ).length > 0
 
     if (
-        hasStoredLeaderboard &&
         storedCycle !== null &&
         storedPattern
     ) {
@@ -252,13 +232,36 @@ function resolveLeaderboardCycleAndPattern(
         }
     }
 
+    const cycle =
+        resolveRequestedCycleIndex(
+            payload
+        )
+    const pattern =
+        resolveRequestedPatternName(
+            payload
+        )
+
+    if (cycle !== null && pattern) {
+        return {
+            cycleIndex: Number(cycle),
+            patternName:
+                normalizePatternName(
+                    pattern
+                )
+        }
+    }
+
     if (
-        storedCycle !== null &&
-        storedPattern
+        hasStoredLeaderboard &&
+        cycle !== null &&
+        pattern
     ) {
         return {
-            cycleIndex: storedCycle,
-            patternName: storedPattern
+            cycleIndex: Number(cycle),
+            patternName:
+                normalizePatternName(
+                    pattern
+                )
         }
     }
 
@@ -312,6 +315,19 @@ export async function POST(
                     body,
                     storedState
                 )
+            console.log(
+                "[Submit] resolved cycle/pattern",
+                {
+                    resolvedCycle:
+                        cycleIndex,
+                    resolvedPattern:
+                        patternName,
+                    storedCycle:
+                        storedState?.leaderboardCycleIndex,
+                    storedPattern:
+                        storedState?.leaderboardPatternName
+                }
+            )
             const completionSeconds = Number(
                 body.completionSeconds || 0
             )

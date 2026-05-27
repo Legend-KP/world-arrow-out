@@ -265,8 +265,6 @@ export default function GameClient() {
     }
 
     async function handleBootstrap() {
-        await waitUntilMiniKitReady()
-
         try {
             const wallet =
                 await authenticateWalletWithRetry()
@@ -277,39 +275,11 @@ export default function GameClient() {
             )
 
             await bootstrap(wallet)
-            return
         } catch (error: any) {
             console.error(
-                "Bootstrap auth failed",
+                "Bootstrap failed",
                 error
             )
-
-            const fallbackWallet =
-                getCachedWallet()
-
-            if (fallbackWallet) {
-                try {
-                    console.warn(
-                        "[Bootstrap] using cached wallet after auth failure",
-                        fallbackWallet
-                    )
-
-                    sendToUnity(
-                        "OnWalletAddressResolved",
-                        fallbackWallet
-                    )
-
-                    await bootstrap(
-                        fallbackWallet
-                    )
-                    return
-                } catch (bootstrapError) {
-                    console.error(
-                        "Bootstrap with cached wallet failed",
-                        bootstrapError
-                    )
-                }
-            }
 
             sendToUnity(
                 "OnWalletAddressResolved",
@@ -760,7 +730,7 @@ export default function GameClient() {
             }}
         >
             <iframe
-                src="https://pub-dc20f441675048ea9b7645055b8de789.r2.dev/index.html"
+                src="https://pub-6f2ae15d3de64f8bbe14c921d7de85af.r2.dev/index.html"
                 style={{
                     width: "100%",
                     height: "100%",

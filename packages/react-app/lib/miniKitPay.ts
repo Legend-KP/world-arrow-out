@@ -24,8 +24,7 @@ export async function miniKitPay(
 
     const initiate =
         await apiPost(
-            "/api/payment/initiate",
-            {}
+            "/api/payment/initiate"
         )
 
     const reference =

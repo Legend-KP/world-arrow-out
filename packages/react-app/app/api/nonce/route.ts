@@ -1,28 +1,17 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
+/**
+ * Stateless nonce endpoint.
+ *
+ * Avoid cookie-bound nonce checks here; mobile webview retries can issue
+ * multiple nonce requests and cause cookie/body drift.
+ */
 export async function GET() {
     const nonce =
         crypto.randomUUID().replace(
             /-/g,
             ""
         )
-
-    const cookieStore =
-        await cookies()
-
-    const isProduction =
-        process.env.NODE_ENV ===
-        "production"
-
-    cookieStore.set("siwe", nonce, {
-        httpOnly: true,
-        sameSite: isProduction
-            ? "none"
-            : "lax",
-        secure: isProduction,
-        path: "/"
-    })
 
     return NextResponse.json({
         nonce

@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { MiniAppWalletAuthSuccessPayload } from "@worldcoin/minikit-js/commands"
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe"
@@ -18,39 +17,12 @@ export async function POST(
                 ? body.nonce.trim()
                 : ""
 
-        const cookieStore =
-            await cookies()
-
-        const storedNonce =
-            cookieStore.get("siwe")?.value
-
-        if (!nonce || !storedNonce) {
+        if (!nonce) {
             return NextResponse.json(
                 {
                     isValid: false,
                     error:
                         "Missing nonce — sign in again"
-                },
-                {
-                    status: 400
-                }
-            )
-        }
-
-        if (nonce !== storedNonce) {
-            console.error(
-                "SIWE cookie nonce mismatch",
-                {
-                    body: nonce,
-                    cookie: storedNonce
-                }
-            )
-
-            return NextResponse.json(
-                {
-                    isValid: false,
-                    error:
-                        "Session expired — please sign in again"
                 },
                 {
                     status: 400
@@ -76,8 +48,6 @@ export async function POST(
                 }
             )
         }
-
-        cookieStore.delete("siwe")
 
         return NextResponse.json({
             isValid: true,

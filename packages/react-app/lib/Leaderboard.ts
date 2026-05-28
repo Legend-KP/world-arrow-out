@@ -8,8 +8,6 @@ import { normalizeWalletAddress } from "./walletAddress"
 
 const CURRENT_CHALLENGE_PATH =
     "universal/currentChallenge"
-const LEADERBOARD_META_PATH = `${CURRENT_CHALLENGE_PATH}/leaderboardMeta`
-const LEADERBOARD_TOP25_PATH = `${CURRENT_CHALLENGE_PATH}/leaderboardTop25`
 const MAX_LEADERBOARD_ENTRIES = 25
 
 export interface LeaderboardEntry {
@@ -159,20 +157,29 @@ function toStoredLeaderboard(
 
 function isNewChallengeWeek(
     state: any,
-    hasLeaderboardData: boolean,
     cycleIndex: number,
     normalizedPatternName: string
 ) {
     const storedCycle = Number(
-        state?.cycleIndex ?? -1
+        state?.leaderboardMeta?.cycleIndex ??
+            state?.leaderboardCycleIndex ??
+            -1
     )
     const storedPattern =
         normalizePatternName(
             String(
-                state?.patternName ||
+                state?.leaderboardMeta
+                    ?.patternName ||
+                state?.leaderboardPatternName ||
                 ""
             )
         )
+    const hasLeaderboardData =
+        !!state?.leaderboardTop25 &&
+        typeof state.leaderboardTop25 ===
+            "object" &&
+        Object.keys(state.leaderboardTop25)
+            .length > 0
 
     if (
         !hasLeaderboardData &&
@@ -228,29 +235,13 @@ export async function submitChallengeScore(
         )
     }
 
-    const [metaState, leaderboardState] =
-        await Promise.all([
-            readDb<any>(
-                LEADERBOARD_META_PATH
-            ),
-            readDb<
-                | Record<
-                      string,
-                      StoredLeaderboardEntry
-                  >
-                | null
-            >(LEADERBOARD_TOP25_PATH)
-        ])
-    const hasLeaderboardData =
-        !!leaderboardState &&
-        typeof leaderboardState === "object" &&
-        Object.keys(leaderboardState)
-            .length > 0
+    const state = await readDb<any>(
+        CURRENT_CHALLENGE_PATH
+    )
 
     const newChallengeWeek =
         isNewChallengeWeek(
-            metaState,
-            hasLeaderboardData,
+            state,
             cycleIndex,
             normalizedPatternName
         )
@@ -262,12 +253,16 @@ export async function submitChallengeScore(
             requestedPattern:
                 normalizedPatternName,
             storedCycle:
-                metaState?.cycleIndex,
+                state?.leaderboardMeta
+                    ?.cycleIndex ??
+                state?.leaderboardCycleIndex,
             storedPattern:
-                metaState?.patternName,
+                state?.leaderboardMeta
+                    ?.patternName ??
+                state?.leaderboardPatternName,
             newChallengeWeek,
             existingEntryCount: Object.keys(
-                leaderboardState || {}
+                state?.leaderboardTop25 || {}
             ).length
         }
     )
@@ -275,7 +270,7 @@ export async function submitChallengeScore(
     const currentEntries = newChallengeWeek
         ? []
         : mapToSortedEntries(
-              leaderboardState
+              state?.leaderboardTop25
           )
 
     const existingEntry =
@@ -318,7 +313,8 @@ export async function submitChallengeScore(
 
     const now = Date.now()
     const previousVersion = Number(
-        metaState?.version ?? 0
+        state?.leaderboardMeta?.version ??
+            0
     )
     const trimmedEntries =
         mapToSortedEntries(
@@ -333,18 +329,20 @@ export async function submitChallengeScore(
     await patchDb(
         CURRENT_CHALLENGE_PATH,
         {
-            leaderboardMeta: {
+            leaderboardCycleIndex:
                 cycleIndex,
-                patternName:
-                    normalizedPatternName,
-                version:
-                    Number.isFinite(
-                        previousVersion
-                    )
-                        ? previousVersion + 1
-                        : 1,
-                updatedAt: now
-            },
+            leaderboardPatternName:
+                normalizedPatternName,
+            "leaderboardMeta/cycleIndex":
+                cycleIndex,
+            "leaderboardMeta/patternName":
+                normalizedPatternName,
+            "leaderboardMeta/version":
+                Number.isFinite(previousVersion)
+                    ? previousVersion + 1
+                    : 1,
+            "leaderboardMeta/updatedAt":
+                now,
             leaderboardTop25:
                 toStoredLeaderboard(
                     trimmedEntries
@@ -383,21 +381,11 @@ export async function getChallengeLeaderboard(
     const safeLimit = clampLimit(
         limit
     )
-    const [metaState, leaderboardState] =
-        await Promise.all([
-            readDb<any>(
-                LEADERBOARD_META_PATH
-            ),
-            readDb<
-                | Record<
-                      string,
-                      StoredLeaderboardEntry
-                  >
-                | null
-            >(LEADERBOARD_TOP25_PATH)
-        ])
+    const state = await readDb<any>(
+        CURRENT_CHALLENGE_PATH
+    )
 
-    if (!metaState && !leaderboardState) {
+    if (!state) {
         return {
             entries: [],
             playerRank: -1,
@@ -409,24 +397,30 @@ export async function getChallengeLeaderboard(
     }
 
     const stateCycleIndex = Number(
-        metaState?.cycleIndex ?? -1
+        state?.leaderboardMeta?.cycleIndex ??
+            state?.leaderboardCycleIndex ??
+            -1
     )
     const statePatternName =
         normalizePatternName(
             String(
-                metaState?.patternName ||
+                state?.leaderboardMeta
+                    ?.patternName ||
+                state?.leaderboardPatternName ||
                 ""
             )
         )
     const version = Number(
-        metaState?.version ?? 0
+        state?.leaderboardMeta?.version ??
+            0
     )
     const updatedAt = Number(
-        metaState?.updatedAt ?? 0
+        state?.leaderboardMeta?.updatedAt ??
+            0
     )
 
     const entries = mapToSortedEntries(
-        leaderboardState
+        state?.leaderboardTop25
     ).slice(0, safeLimit)
 
     console.log(

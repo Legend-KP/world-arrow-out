@@ -74,17 +74,9 @@ function resolveLeaderboardCycleAndPattern(
 function clampLimit(
     value: unknown
 ) {
-    const numericValue = Number(
-        value
-    )
-
-    if (!Number.isFinite(numericValue))
-        return MAX_LEADERBOARD_ENTRIES
-
-    return Math.min(
-        MAX_LEADERBOARD_ENTRIES,
-        Math.max(1, Math.floor(numericValue))
-    )
+    // Always return the shared top-25 window for all clients.
+    // This prevents menu/challenge callers from diverging by accident.
+    return MAX_LEADERBOARD_ENTRIES
 }
 
 export async function POST(

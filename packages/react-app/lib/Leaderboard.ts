@@ -8,6 +8,8 @@ import { normalizeWalletAddress } from "./walletAddress"
 
 const CURRENT_CHALLENGE_PATH =
     "universal/currentChallenge"
+const LEADERBOARD_META_PATH = `${CURRENT_CHALLENGE_PATH}/leaderboardMeta`
+const LEADERBOARD_TOP25_PATH = `${CURRENT_CHALLENGE_PATH}/leaderboardTop25`
 const MAX_LEADERBOARD_ENTRIES = 25
 
 export interface LeaderboardEntry {
@@ -15,7 +17,6 @@ export interface LeaderboardEntry {
     playerName: string
     walletAddress: string
     completionSeconds: number
-    updatedAt: number
 }
 
 interface StoredLeaderboardEntry {
@@ -115,13 +116,7 @@ function mapToSortedEntries(
                 normalizeWalletAddress(
                     entry.walletAddress
                 ),
-            completionSeconds:
-                Number(
-                    entry.completionSeconds
-                ),
-            updatedAt: Number(
-                entry.updatedAt || 0
-            )
+            completionSeconds: Number(entry.completionSeconds)
         })
     )
 }
@@ -155,9 +150,7 @@ function toStoredLeaderboard(
                 Number(
                     entry.completionSeconds
                 ),
-            updatedAt: Number(
-                entry.updatedAt || 0
-            )
+            updatedAt: Date.now()
         }
     }
 
@@ -166,25 +159,20 @@ function toStoredLeaderboard(
 
 function isNewChallengeWeek(
     state: any,
+    hasLeaderboardData: boolean,
     cycleIndex: number,
     normalizedPatternName: string
 ) {
     const storedCycle = Number(
-        state?.leaderboardCycleIndex ?? -1
+        state?.cycleIndex ?? -1
     )
     const storedPattern =
         normalizePatternName(
             String(
-                state?.leaderboardPatternName ||
+                state?.patternName ||
                 ""
             )
         )
-    const hasLeaderboardData =
-        !!state?.leaderboard &&
-        typeof state.leaderboard ===
-            "object" &&
-        Object.keys(state.leaderboard)
-            .length > 0
 
     if (
         !hasLeaderboardData &&
@@ -240,13 +228,29 @@ export async function submitChallengeScore(
         )
     }
 
-    const state = await readDb<any>(
-        CURRENT_CHALLENGE_PATH
-    )
+    const [metaState, leaderboardState] =
+        await Promise.all([
+            readDb<any>(
+                LEADERBOARD_META_PATH
+            ),
+            readDb<
+                | Record<
+                      string,
+                      StoredLeaderboardEntry
+                  >
+                | null
+            >(LEADERBOARD_TOP25_PATH)
+        ])
+    const hasLeaderboardData =
+        !!leaderboardState &&
+        typeof leaderboardState === "object" &&
+        Object.keys(leaderboardState)
+            .length > 0
 
     const newChallengeWeek =
         isNewChallengeWeek(
-            state,
+            metaState,
+            hasLeaderboardData,
             cycleIndex,
             normalizedPatternName
         )
@@ -258,12 +262,12 @@ export async function submitChallengeScore(
             requestedPattern:
                 normalizedPatternName,
             storedCycle:
-                state?.leaderboardCycleIndex,
+                metaState?.cycleIndex,
             storedPattern:
-                state?.leaderboardPatternName,
+                metaState?.patternName,
             newChallengeWeek,
             existingEntryCount: Object.keys(
-                state?.leaderboard || {}
+                leaderboardState || {}
             ).length
         }
     )
@@ -271,7 +275,7 @@ export async function submitChallengeScore(
     const currentEntries = newChallengeWeek
         ? []
         : mapToSortedEntries(
-              state?.leaderboard
+              leaderboardState
           )
 
     const existingEntry =
@@ -309,11 +313,13 @@ export async function submitChallengeScore(
         rank: 0,
         playerName: safePlayerName,
         walletAddress: normalizedWallet,
-        completionSeconds:
-            safeCompletionSeconds,
-        updatedAt: Date.now()
+        completionSeconds: safeCompletionSeconds
     })
 
+    const now = Date.now()
+    const previousVersion = Number(
+        metaState?.version ?? 0
+    )
     const trimmedEntries =
         mapToSortedEntries(
             toStoredLeaderboard(
@@ -327,11 +333,19 @@ export async function submitChallengeScore(
     await patchDb(
         CURRENT_CHALLENGE_PATH,
         {
-            leaderboardCycleIndex:
+            leaderboardMeta: {
                 cycleIndex,
-            leaderboardPatternName:
-                normalizedPatternName,
-            leaderboard:
+                patternName:
+                    normalizedPatternName,
+                version:
+                    Number.isFinite(
+                        previousVersion
+                    )
+                        ? previousVersion + 1
+                        : 1,
+                updatedAt: now
+            },
+            leaderboardTop25:
                 toStoredLeaderboard(
                     trimmedEntries
                 )
@@ -352,7 +366,12 @@ export async function submitChallengeScore(
         playerRank:
             playerRank > 0
                 ? playerRank
-                : -1
+                : -1,
+        version:
+            Number.isFinite(previousVersion)
+                ? previousVersion + 1
+                : 1,
+        updatedAt: now
     }
 }
 
@@ -364,32 +383,50 @@ export async function getChallengeLeaderboard(
     const safeLimit = clampLimit(
         limit
     )
-    const state = await readDb<any>(
-        CURRENT_CHALLENGE_PATH
-    )
+    const [metaState, leaderboardState] =
+        await Promise.all([
+            readDb<any>(
+                LEADERBOARD_META_PATH
+            ),
+            readDb<
+                | Record<
+                      string,
+                      StoredLeaderboardEntry
+                  >
+                | null
+            >(LEADERBOARD_TOP25_PATH)
+        ])
 
-    if (!state) {
+    if (!metaState && !leaderboardState) {
         return {
             entries: [],
             playerRank: -1,
             cycleIndex: -1,
-            patternName: "unknown"
+            patternName: "unknown",
+            version: 0,
+            updatedAt: 0
         }
     }
 
     const stateCycleIndex = Number(
-        state?.leaderboardCycleIndex ?? -1
+        metaState?.cycleIndex ?? -1
     )
     const statePatternName =
         normalizePatternName(
             String(
-                state?.leaderboardPatternName ||
+                metaState?.patternName ||
                 ""
             )
         )
+    const version = Number(
+        metaState?.version ?? 0
+    )
+    const updatedAt = Number(
+        metaState?.updatedAt ?? 0
+    )
 
     const entries = mapToSortedEntries(
-        state?.leaderboard
+        leaderboardState
     ).slice(0, safeLimit)
 
     console.log(
@@ -397,7 +434,9 @@ export async function getChallengeLeaderboard(
         {
             storedCycle: stateCycleIndex,
             storedPattern: statePatternName,
-            entryCount: entries.length
+            entryCount: entries.length,
+            version,
+            updatedAt
         }
     )
 
@@ -434,6 +473,16 @@ export async function getChallengeLeaderboard(
                 ? playerRank
                 : -1,
         cycleIndex: stateCycleIndex,
-        patternName: statePatternName
+        patternName: statePatternName,
+        version:
+            Number.isFinite(version) &&
+            version > 0
+                ? version
+                : 0,
+        updatedAt:
+            Number.isFinite(updatedAt) &&
+            updatedAt > 0
+                ? updatedAt
+                : 0
     }
 }

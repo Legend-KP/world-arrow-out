@@ -16,6 +16,8 @@ import { readDb } from "@/lib/firebase-server"
 import { normalizeWalletAddress } from "@/lib/walletAddress"
 
 const MAX_LEADERBOARD_ENTRIES = 25
+const LEADERBOARD_META_PATH =
+    "universal/currentChallenge/leaderboardMeta"
 
 function parseOptionalCycleIndex(
     value: unknown
@@ -204,23 +206,35 @@ function resolveLeaderboardCycleAndPattern(
 ) {
     const storedCycle =
         parseOptionalCycleIndex(
-            storedState?.leaderboardCycleIndex
+            pickFirstDefined(
+                storedState?.cycleIndex,
+                storedState?.leaderboardCycleIndex
+            )
         )
     const storedPattern =
-        typeof storedState?.leaderboardPatternName ===
+        typeof pickFirstDefined(
+            storedState?.patternName,
+            storedState?.leaderboardPatternName
+        ) ===
             "string" &&
-        storedState.leaderboardPatternName.trim()
+        String(
+            pickFirstDefined(
+                storedState?.patternName,
+                storedState?.leaderboardPatternName
+            )
+        ).trim()
             ? normalizePatternName(
-                  storedState.leaderboardPatternName
+                  String(
+                      pickFirstDefined(
+                          storedState?.patternName,
+                          storedState?.leaderboardPatternName
+                      )
+                  )
               )
             : null
     const hasStoredLeaderboard =
-        !!storedState?.leaderboard &&
-        typeof storedState.leaderboard ===
-            "object" &&
-        Object.keys(
-            storedState.leaderboard
-        ).length > 0
+        storedCycle !== null &&
+        !!storedPattern
 
     if (
         storedCycle !== null &&
@@ -300,7 +314,7 @@ export async function POST(
         if (action === "submit") {
             const storedState =
                 await readDb<any>(
-                    "universal/currentChallenge"
+                    LEADERBOARD_META_PATH
                 )
             const walletAddress =
                 body.walletAddress
@@ -323,8 +337,10 @@ export async function POST(
                     resolvedPattern:
                         patternName,
                     storedCycle:
+                        storedState?.cycleIndex ??
                         storedState?.leaderboardCycleIndex,
                     storedPattern:
+                        storedState?.patternName ??
                         storedState?.leaderboardPatternName
                 }
             )
@@ -447,6 +463,10 @@ export async function POST(
                     leaderboard.cycleIndex,
                 patternName:
                     leaderboard.patternName,
+                version:
+                    leaderboard.version,
+                updatedAt:
+                    leaderboard.updatedAt,
                 playerChallenge,
                 chancesLeft:
                     playerChallenge?.chances ??

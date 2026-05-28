@@ -709,17 +709,63 @@ export default function GameClient() {
                 )
             }
 
+            const entries = Array.isArray(
+                response.entries
+            )
+                ? response.entries
+                : Array.isArray(
+                      response.result?.entries
+                  )
+                  ? response.result.entries
+                  : []
+            const playerRank =
+                typeof response.playerRank ===
+                "number"
+                    ? response.playerRank
+                    : typeof response.result
+                          ?.playerRank ===
+                      "number"
+                      ? response.result.playerRank
+                      : -1
+
+            console.log(
+                "[Leaderboard] get bridge payload",
+                {
+                    requestedLimit:
+                        payload?.limit,
+                    apiEntries:
+                        entries.length,
+                    cycleIndex:
+                        response.cycleIndex,
+                    patternName:
+                        response.patternName
+                }
+            )
+
             sendToUnity(
                 "OnChallengeLeaderboardReceived",
                 JSON.stringify({
-                    entries:
-                        response.entries,
-                    playerRank:
-                        response.playerRank,
+                    entries,
+                    leaderboard: entries,
+                    leaderboardEntries:
+                        entries,
+                    playerRank,
                     chancesLeft:
                         response.chancesLeft,
                     playerChallenge:
-                        response.playerChallenge
+                        response.playerChallenge,
+                    cycleIndex:
+                        response.cycleIndex ??
+                        response.result
+                            ?.cycleIndex,
+                    patternName:
+                        response.patternName ??
+                        response.result
+                            ?.patternName,
+                    result: {
+                        entries,
+                        playerRank
+                    }
                 })
             )
         } catch (error: any) {

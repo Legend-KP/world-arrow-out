@@ -502,25 +502,22 @@ export async function getUniversalSnapshot() {
         Number.isFinite(storedCycleIndex)
     const hasValidStoredEnd =
         Number.isFinite(storedEndUnixMs)
-    const weeksElapsedSinceEnd =
-        hasValidStoredEnd &&
-        storedEndUnixMs <= now
-            ? Math.max(
-                  1,
-                  Math.ceil(
-                      (now - storedEndUnixMs + 1) /
-                          WEEK_MS
-                  )
-              )
-            : 0
-    const rolledCycleIndex =
-        hasValidStoredCycle
-            ? storedCycleIndex +
-              weeksElapsedSinceEnd
-            : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
     const shouldRollToCurrentWeek =
         !hasValidStoredEnd ||
         storedEndUnixMs <= now
+    const shouldNormalizeMigratedCycle =
+        hasValidStoredCycle &&
+        storedCycleIndex > 1 &&
+        Number(
+            snapshot?.leaderboardCycleIndex ??
+                0
+        ) === 0
+    const rolledCycleIndex =
+        hasValidStoredCycle
+            ? shouldRollToCurrentWeek
+                ? storedCycleIndex + 1
+                : storedCycleIndex
+            : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
     const shouldNormalizeEndToUtcWeek =
         hasValidStoredEnd &&
         storedEndUnixMs !== currentWeekEndMs
@@ -536,11 +533,14 @@ export async function getUniversalSnapshot() {
     if (
         shouldRollToCurrentWeek ||
         shouldNormalizeEndToUtcWeek ||
+        shouldNormalizeMigratedCycle ||
         shouldBackfillFields
     ) {
         const patchedUniversal = {
             weeklyChallengeCycleIndex:
-                rolledCycleIndex,
+                shouldNormalizeMigratedCycle
+                    ? 1
+                    : rolledCycleIndex,
             weeklyChallengeEndUnixMilliseconds:
                 currentWeekEndMs,
             weeklyChallengePatternName

@@ -742,31 +742,53 @@ export default function GameClient() {
                 }
             )
 
+            const leaderboardPayload = {
+                entries,
+                leaderboard: entries,
+                leaderboardEntries:
+                    entries,
+                playerRank,
+                chancesLeft:
+                    response.chancesLeft,
+                playerChallenge:
+                    response.playerChallenge,
+                cycleIndex:
+                    response.cycleIndex ??
+                    response.result
+                        ?.cycleIndex,
+                patternName:
+                    response.patternName ??
+                    response.result
+                        ?.patternName,
+                result: {
+                    entries,
+                    playerRank
+                }
+            }
+
             sendToUnity(
                 "OnChallengeLeaderboardReceived",
-                JSON.stringify({
-                    entries,
-                    leaderboard: entries,
-                    leaderboardEntries:
-                        entries,
-                    playerRank,
-                    chancesLeft:
-                        response.chancesLeft,
-                    playerChallenge:
-                        response.playerChallenge,
-                    cycleIndex:
-                        response.cycleIndex ??
-                        response.result
-                            ?.cycleIndex,
-                    patternName:
-                        response.patternName ??
-                        response.result
-                            ?.patternName,
-                    result: {
-                        entries,
-                        playerRank
-                    }
-                })
+                JSON.stringify(
+                    leaderboardPayload
+                )
+            )
+            // Compatibility callbacks for older Unity listeners.
+            sendToUnity(
+                "OnLeaderboardReceived",
+                JSON.stringify(
+                    leaderboardPayload
+                )
+            )
+            sendToUnity(
+                "OnLeaderboardDataReceived",
+                JSON.stringify(
+                    leaderboardPayload
+                )
+            )
+            // Some clients expect raw array payload.
+            sendToUnity(
+                "OnChallengeLeaderboardRowsReceived",
+                JSON.stringify(entries)
             )
         } catch (error: any) {
             sendToUnity(

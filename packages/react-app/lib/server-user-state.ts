@@ -26,7 +26,8 @@ import {
 
 const DEFAULT_UNIVERSAL: UniversalProgress = {
     weeklyChallengeCycleIndex: 0,
-    weeklyChallengeEndUnixMilliseconds: 0
+    weeklyChallengeEndUnixMilliseconds: 1749254400000,
+    weeklyChallengePatternName: "Star"
 }
 
 const FREE_UNLOCK_HINT_REWARD = 5
@@ -449,6 +450,10 @@ export async function getUniversalSnapshot() {
             snapshot?.weeklyChallengeEndUnixMilliseconds ??
             DEFAULT_UNIVERSAL.weeklyChallengeEndUnixMilliseconds
         )
+    const weeklyChallengePatternName = String(
+        snapshot?.weeklyChallengePatternName ??
+            DEFAULT_UNIVERSAL.weeklyChallengePatternName
+    )
 
     if (!snapshot) {
         await patchDb(
@@ -463,6 +468,8 @@ export async function getUniversalSnapshot() {
         snapshot.weeklyChallengeCycleIndex ===
             undefined &&
         snapshot.weeklyChallengeEndUnixMilliseconds ===
+            undefined &&
+        snapshot.weeklyChallengePatternName ===
             undefined
     ) {
         await patchDb(
@@ -473,7 +480,8 @@ export async function getUniversalSnapshot() {
 
     return {
         weeklyChallengeCycleIndex,
-        weeklyChallengeEndUnixMilliseconds
+        weeklyChallengeEndUnixMilliseconds,
+        weeklyChallengePatternName
     }
 }
 
@@ -675,6 +683,11 @@ export function sanitizeSnapshot(
                 Number(
                     snapshot.universal?.weeklyChallengeEndUnixMilliseconds ||
                     0
+                ),
+            weeklyChallengePatternName:
+                String(
+                    snapshot.universal?.weeklyChallengePatternName ||
+                        DEFAULT_UNIVERSAL.weeklyChallengePatternName
                 )
         }
     }

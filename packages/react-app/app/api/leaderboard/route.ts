@@ -17,7 +17,7 @@ import { normalizeWalletAddress } from "@/lib/walletAddress"
 
 const MAX_LEADERBOARD_ENTRIES = 25
 const LEADERBOARD_META_PATH =
-    "universal/currentChallenge/leaderboardMeta"
+    "universal/currentChallenge"
 
 function parseOptionalCycleIndex(
     value: unknown
@@ -39,202 +39,21 @@ function parseOptionalCycleIndex(
         : null
 }
 
-function parseOptionalPatternName(
-    value: unknown
-) {
-    if (
-        typeof value !== "string" ||
-        !value.trim()
-    ) {
-        return null
-    }
-
-    return value.trim().toLowerCase()
-}
-
-function pickFirstDefined(
-    ...values: unknown[]
-) {
-    for (const value of values) {
-        if (
-            value !== undefined &&
-            value !== null &&
-            value !== ""
-        ) {
-            return value
-        }
-    }
-
-    return undefined
-}
-
-function extractCycleAndPatternFromText(
-    value: unknown
-) {
-    if (typeof value !== "string") {
-        return {
-            cycleIndex: null as number | null,
-            patternName: null as string | null
-        }
-    }
-
-    const text = value.trim()
-
-    if (!text) {
-        return {
-            cycleIndex: null as number | null,
-            patternName: null as string | null
-        }
-    }
-
-    const match = text.match(
-        /challenge\s*#\s*(\d+)(?:\s*[-:]\s*([a-z0-9 _-]+))?/i
-    )
-
-    if (!match) {
-        return {
-            cycleIndex: null as number | null,
-            patternName: null as string | null
-        }
-    }
-
-    const parsedCycle = parseOptionalCycleIndex(
-        match[1]
-    )
-    const parsedPattern =
-        parseOptionalPatternName(
-            match[2]
-        )
-
-    return {
-        cycleIndex: parsedCycle,
-        patternName: parsedPattern
-    }
-}
-
-function resolveChallengeText(
-    payload: any
-) {
-    return pickFirstDefined(
-        payload?.challengeTitle,
-        payload?.weeklyChallengeTitle,
-        payload?.title,
-        payload?.headerText,
-        payload?.challenge?.title,
-        payload?.challenge?.label,
-        payload?.challengeLabel,
-        payload?.challengeDisplayName
-    )
-}
-
-function resolveRequestedCycleIndex(
-    payload: any
-) {
-    const fromExplicitField =
-        parseOptionalCycleIndex(
-            pickFirstDefined(
-                payload?.cycleIndex,
-                payload?.challengeCycleIndex,
-                payload?.challenge?.cycleIndex,
-                payload?.playerChallenge
-                    ?.streakCycleIndex
-            )
-        )
-
-    if (fromExplicitField !== null) {
-        return fromExplicitField
-    }
-
-    const fromTitle =
-        extractCycleAndPatternFromText(
-            pickFirstDefined(
-                resolveChallengeText(
-                    payload
-                ),
-                payload?.challenge?.name,
-                payload?.patternName
-            )
-        ).cycleIndex
-
-    if (fromTitle !== null) {
-        return fromTitle
-    }
-
-    return parseOptionalCycleIndex(
-        pickFirstDefined(
-            payload?.weeklyChallengeCycleIndex,
-            payload?.challenge
-                ?.weeklyChallengeCycleIndex,
-            payload?.universal
-                ?.weeklyChallengeCycleIndex,
-            payload?.snapshot?.universal
-                ?.weeklyChallengeCycleIndex
-        )
-    )
-}
-
-function resolveRequestedPatternName(
-    payload: any
-) {
-    const fromField =
-        parseOptionalPatternName(
-            pickFirstDefined(
-                payload?.patternName,
-                payload?.challengePatternName,
-                payload?.challenge?.patternName,
-                payload?.challenge?.name
-            )
-        )
-
-    if (fromField) {
-        return fromField
-    }
-
-    return extractCycleAndPatternFromText(
-        pickFirstDefined(
-            resolveChallengeText(
-                payload
-            ),
-            payload?.challenge?.name
-        )
-    ).patternName
-}
-
 function resolveLeaderboardCycleAndPattern(
-    payload: any,
     storedState: any
 ) {
     const storedCycle =
         parseOptionalCycleIndex(
-            pickFirstDefined(
-                storedState?.cycleIndex,
-                storedState?.leaderboardCycleIndex
-            )
+            storedState?.leaderboardCycleIndex
         )
     const storedPattern =
-        typeof pickFirstDefined(
-            storedState?.patternName,
-            storedState?.leaderboardPatternName
-        ) ===
+        typeof storedState?.leaderboardPatternName ===
             "string" &&
-        String(
-            pickFirstDefined(
-                storedState?.patternName,
-                storedState?.leaderboardPatternName
-            )
-        ).trim()
+        storedState.leaderboardPatternName.trim()
             ? normalizePatternName(
-                  String(
-                      pickFirstDefined(
-                          storedState?.patternName,
-                          storedState?.leaderboardPatternName
-                      )
-                  )
+                  storedState.leaderboardPatternName
               )
             : null
-    const hasStoredLeaderboard =
-        storedCycle !== null &&
-        !!storedPattern
 
     if (
         storedCycle !== null &&
@@ -246,42 +65,9 @@ function resolveLeaderboardCycleAndPattern(
         }
     }
 
-    const cycle =
-        resolveRequestedCycleIndex(
-            payload
-        )
-    const pattern =
-        resolveRequestedPatternName(
-            payload
-        )
-
-    if (cycle !== null && pattern) {
-        return {
-            cycleIndex: Number(cycle),
-            patternName:
-                normalizePatternName(
-                    pattern
-                )
-        }
-    }
-
-    if (
-        hasStoredLeaderboard &&
-        cycle !== null &&
-        pattern
-    ) {
-        return {
-            cycleIndex: Number(cycle),
-            patternName:
-                normalizePatternName(
-                    pattern
-                )
-        }
-    }
-
     return {
         cycleIndex: 0,
-        patternName: "unknown"
+        patternName: "star"
     }
 }
 
@@ -326,7 +112,6 @@ export async function POST(
                 patternName
             } =
                 resolveLeaderboardCycleAndPattern(
-                    body,
                     storedState
                 )
             console.log(
@@ -337,10 +122,8 @@ export async function POST(
                     resolvedPattern:
                         patternName,
                     storedCycle:
-                        storedState?.cycleIndex ??
                         storedState?.leaderboardCycleIndex,
                     storedPattern:
-                        storedState?.patternName ??
                         storedState?.leaderboardPatternName
                 }
             )
@@ -394,11 +177,14 @@ export async function POST(
                         chancesAfterPlay
                     )
 
-                playSnapshot =
-                    playResult.snapshot ?? null
-                chancesLeft =
-                    playResult.snapshot?.challenge
-                        ?.chances ?? null
+                if (playResult.success) {
+                    playSnapshot =
+                        playResult.snapshot ?? null
+                    chancesLeft =
+                        playResult.snapshot
+                            ?.challenge?.chances ??
+                        null
+                }
             } catch (playError) {
                 console.warn(
                     "recordChallengePlay failed after leaderboard submit",

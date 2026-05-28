@@ -13,6 +13,7 @@ export interface ChallengeProgress {
 export interface UniversalProgress {
     weeklyChallengeCycleIndex: number
     weeklyChallengeEndUnixMilliseconds: number
+    weeklyChallengePatternName: string
 }
 
 export interface UserSnapshot {

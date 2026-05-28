@@ -277,6 +277,11 @@ export function normalizeIncomingSnapshot(
                 Number(
                     universal.weeklyChallengeEndUnixMilliseconds ??
                     0
+                ),
+            weeklyChallengePatternName:
+                String(
+                    universal.weeklyChallengePatternName ??
+                        "Star"
                 )
         }
     }

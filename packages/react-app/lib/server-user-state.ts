@@ -34,6 +34,31 @@ const FREE_UNLOCK_HINT_REWARD = 5
 const CHALLENGE_COOLDOWN_MS =
     24 * 60 * 60 * 1000
 const DEFAULT_CHALLENGE_CHANCES = 1
+const WEEK_MS =
+    7 * 24 * 60 * 60 * 1000
+
+function getCurrentUtcWeekEnd(
+    nowMs: number
+) {
+    const now = new Date(nowMs)
+    const utcDay = now.getUTCDay()
+    const mondayBasedDay =
+        (utcDay + 6) % 7
+    const daysUntilNextMonday =
+        7 - mondayBasedDay
+    const nextMondayStartMs = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() +
+            daysUntilNextMonday,
+        0,
+        0,
+        0,
+        0
+    )
+
+    return nextMondayStartMs
+}
 
 function mergeStoredUserRecords(
     primary: Record<string, unknown>,
@@ -439,48 +464,103 @@ export async function getUniversalSnapshot() {
         await readDb<any>(
             "universal/currentChallenge"
         )
+    const now = Date.now()
+    const currentWeekEndMs =
+        getCurrentUtcWeekEnd(now)
 
-    const weeklyChallengeCycleIndex =
-        Number(
-            snapshot?.weeklyChallengeCycleIndex ??
+    const storedCycleIndex = Number(
+        snapshot?.weeklyChallengeCycleIndex ??
             DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
-        )
-    const weeklyChallengeEndUnixMilliseconds =
-        Number(
-            snapshot?.weeklyChallengeEndUnixMilliseconds ??
-            DEFAULT_UNIVERSAL.weeklyChallengeEndUnixMilliseconds
-        )
+    )
+    const storedEndUnixMs = Number(
+        snapshot?.weeklyChallengeEndUnixMilliseconds ??
+            currentWeekEndMs
+    )
     const weeklyChallengePatternName = String(
         snapshot?.weeklyChallengePatternName ??
             DEFAULT_UNIVERSAL.weeklyChallengePatternName
     )
 
     if (!snapshot) {
+        const initializedUniversal = {
+            weeklyChallengeCycleIndex: 0,
+            weeklyChallengeEndUnixMilliseconds:
+                currentWeekEndMs,
+            weeklyChallengePatternName:
+                DEFAULT_UNIVERSAL.weeklyChallengePatternName
+        }
+
         await patchDb(
             "universal/currentChallenge",
-            DEFAULT_UNIVERSAL
+            initializedUniversal
         )
 
-        return DEFAULT_UNIVERSAL
+        return initializedUniversal
     }
 
-    if (
+    const hasValidStoredCycle =
+        Number.isFinite(storedCycleIndex)
+    const hasValidStoredEnd =
+        Number.isFinite(storedEndUnixMs)
+    const weeksElapsedSinceEnd =
+        hasValidStoredEnd &&
+        storedEndUnixMs <= now
+            ? Math.max(
+                  1,
+                  Math.ceil(
+                      (now - storedEndUnixMs + 1) /
+                          WEEK_MS
+                  )
+              )
+            : 0
+    const rolledCycleIndex =
+        hasValidStoredCycle
+            ? storedCycleIndex +
+              weeksElapsedSinceEnd
+            : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
+    const shouldRollToCurrentWeek =
+        !hasValidStoredEnd ||
+        storedEndUnixMs <= now
+    const shouldNormalizeEndToUtcWeek =
+        hasValidStoredEnd &&
+        storedEndUnixMs !== currentWeekEndMs
+
+    const shouldBackfillFields =
         snapshot.weeklyChallengeCycleIndex ===
-            undefined &&
+            undefined ||
         snapshot.weeklyChallengeEndUnixMilliseconds ===
-            undefined &&
+            undefined ||
         snapshot.weeklyChallengePatternName ===
             undefined
+
+    if (
+        shouldRollToCurrentWeek ||
+        shouldNormalizeEndToUtcWeek ||
+        shouldBackfillFields
     ) {
+        const patchedUniversal = {
+            weeklyChallengeCycleIndex:
+                rolledCycleIndex,
+            weeklyChallengeEndUnixMilliseconds:
+                currentWeekEndMs,
+            weeklyChallengePatternName
+        }
+
         await patchDb(
             "universal/currentChallenge",
-            DEFAULT_UNIVERSAL
+            patchedUniversal
         )
+
+        return patchedUniversal
     }
 
     return {
-        weeklyChallengeCycleIndex,
-        weeklyChallengeEndUnixMilliseconds,
+        weeklyChallengeCycleIndex:
+            hasValidStoredCycle
+                ? storedCycleIndex
+                : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex,
+        weeklyChallengeEndUnixMilliseconds:
+            currentWeekEndMs,
         weeklyChallengePatternName
     }
 }

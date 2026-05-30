@@ -5,6 +5,12 @@ import {
     readDb
 } from "./firebase-server"
 import { normalizeWalletAddress } from "./walletAddress"
+import {
+    normalizePatternName,
+    resolveChallengeCycleAndPattern
+} from "./weekly-challenge"
+
+export { normalizePatternName } from "./weekly-challenge"
 
 const CURRENT_CHALLENGE_PATH =
     "universal/currentChallenge"
@@ -22,18 +28,6 @@ interface StoredLeaderboardEntry {
     walletAddress: string
     completionSeconds: number
     updatedAt: number
-}
-
-export function normalizePatternName(
-    patternName: string
-) {
-    const normalized = (
-        patternName || "unknown"
-    )
-        .trim()
-        .toLowerCase()
-
-    return normalized || "unknown"
 }
 
 function clampLimit(
@@ -160,20 +154,14 @@ function isNewChallengeWeek(
     cycleIndex: number,
     normalizedPatternName: string
 ) {
-    const storedCycle = Number(
-        state?.leaderboardMeta?.cycleIndex ??
-            state?.leaderboardCycleIndex ??
-            -1
-    )
-    const storedPattern =
-        normalizePatternName(
-            String(
-                state?.leaderboardMeta
-                    ?.patternName ||
-                state?.leaderboardPatternName ||
-                ""
-            )
+    const storedChallenge =
+        resolveChallengeCycleAndPattern(
+            state
         )
+    const storedCycle =
+        storedChallenge.cycleIndex
+    const storedPattern =
+        storedChallenge.patternName
     const hasLeaderboardData =
         !!state?.leaderboardTop25 &&
         typeof state.leaderboardTop25 ===
@@ -396,20 +384,14 @@ export async function getChallengeLeaderboard(
         }
     }
 
-    const stateCycleIndex = Number(
-        state?.leaderboardMeta?.cycleIndex ??
-            state?.leaderboardCycleIndex ??
-            -1
-    )
-    const statePatternName =
-        normalizePatternName(
-            String(
-                state?.leaderboardMeta
-                    ?.patternName ||
-                state?.leaderboardPatternName ||
-                ""
-            )
+    const resolvedChallenge =
+        resolveChallengeCycleAndPattern(
+            state
         )
+    const stateCycleIndex =
+        resolvedChallenge.cycleIndex
+    const statePatternName =
+        resolvedChallenge.patternName
     const version = Number(
         state?.leaderboardMeta?.version ??
             0

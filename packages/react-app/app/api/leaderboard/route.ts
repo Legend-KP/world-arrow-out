@@ -2,80 +2,29 @@ import { NextResponse } from "next/server"
 
 import {
     submitChallengeScore,
-    getChallengeLeaderboard,
-    normalizePatternName
+    getChallengeLeaderboard
 } from "@/lib/Leaderboard"
 
 import {
     applyChallengeDailyReset,
     getOrCreateUserSnapshot,
+    getUniversalSnapshot,
     recordChallengePlay
 } from "@/lib/server-user-state"
-import { readDb } from "@/lib/firebase-server"
 
 import { normalizeWalletAddress } from "@/lib/walletAddress"
 
+import {
+    resolveChallengeCycleAndPattern,
+    validateClientChallengeCycleAndPattern
+} from "@/lib/weekly-challenge"
+
 const MAX_LEADERBOARD_ENTRIES = 25
-const LEADERBOARD_META_PATH =
-    "universal/currentChallenge"
-
-function parseOptionalCycleIndex(
-    value: unknown
-) {
-    if (
-        value === undefined ||
-        value === null ||
-        value === ""
-    ) {
-        return null
-    }
-
-    const numericValue = Number(
-        value
-    )
-
-    return Number.isFinite(numericValue)
-        ? Math.floor(numericValue)
-        : null
-}
-
-function resolveLeaderboardCycleAndPattern(
-    storedState: any
-) {
-    const storedCycle =
-        parseOptionalCycleIndex(
-            storedState?.leaderboardCycleIndex
-        )
-    const storedPattern =
-        typeof storedState?.leaderboardPatternName ===
-            "string" &&
-        storedState.leaderboardPatternName.trim()
-            ? normalizePatternName(
-                  storedState.leaderboardPatternName
-              )
-            : null
-
-    if (
-        storedCycle !== null &&
-        storedPattern
-    ) {
-        return {
-            cycleIndex: storedCycle,
-            patternName: storedPattern
-        }
-    }
-
-    return {
-        cycleIndex: 0,
-        patternName: "star"
-    }
-}
 
 function clampLimit(
-    value: unknown
+    _value: unknown
 ) {
     // Always return the shared top-25 window for all clients.
-    // This prevents menu/challenge callers from diverging by accident.
     return MAX_LEADERBOARD_ENTRIES
 }
 
@@ -90,22 +39,36 @@ export async function POST(
             body.action
 
         if (action === "submit") {
-            const storedState =
-                await readDb<any>(
-                    LEADERBOARD_META_PATH
+            const universal =
+                await getUniversalSnapshot()
+            const resolved =
+                resolveChallengeCycleAndPattern(
+                    universal as unknown as Record<
+                        string,
+                        unknown
+                    >
                 )
+            const authoritative = {
+                cycleIndex:
+                    resolved.cycleIndex,
+                patternName:
+                    resolved.patternName
+            }
+            const {
+                cycleIndex,
+                patternName
+            } =
+                validateClientChallengeCycleAndPattern(
+                    body,
+                    authoritative
+                )
+
             const walletAddress =
                 body.walletAddress
             const playerName =
                 body.playerName ||
                 "Guest"
-            const {
-                cycleIndex,
-                patternName
-            } =
-                resolveLeaderboardCycleAndPattern(
-                    storedState
-                )
+
             console.log(
                 "[Submit] resolved cycle/pattern",
                 {
@@ -113,12 +76,13 @@ export async function POST(
                         cycleIndex,
                     resolvedPattern:
                         patternName,
-                    storedCycle:
-                        storedState?.leaderboardCycleIndex,
-                    storedPattern:
-                        storedState?.leaderboardPatternName
+                    clientCycle:
+                        body.cycleIndex,
+                    clientPattern:
+                        body.patternName
                 }
             )
+
             const completionSeconds = Number(
                 body.completionSeconds || 0
             )
@@ -197,6 +161,8 @@ export async function POST(
         }
 
         if (action === "get") {
+            await getUniversalSnapshot()
+
             const limit = clampLimit(
                 body.limit
             )

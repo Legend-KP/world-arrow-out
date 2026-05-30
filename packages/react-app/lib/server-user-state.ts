@@ -24,6 +24,12 @@ import {
     deleteDb
 } from "./firebase-server"
 
+import {
+    buildUniversalChallengeDbPatch,
+    getWeeklyPatternNameForCycle,
+    resolveChallengeCycleAndPattern
+} from "./weekly-challenge"
+
 const DEFAULT_UNIVERSAL: UniversalProgress = {
     weeklyChallengeCycleIndex: 0,
     weeklyChallengeEndUnixMilliseconds: 1749254400000,
@@ -476,26 +482,27 @@ export async function getUniversalSnapshot() {
         snapshot?.weeklyChallengeEndUnixMilliseconds ??
             currentWeekEndMs
     )
-    const weeklyChallengePatternName = String(
-        snapshot?.weeklyChallengePatternName ??
-            DEFAULT_UNIVERSAL.weeklyChallengePatternName
-    )
 
     if (!snapshot) {
-        const initializedUniversal = {
+        const { patch, displayPatternName } =
+            buildUniversalChallengeDbPatch(
+                0,
+                currentWeekEndMs,
+                { clearLeaderboard: true }
+            )
+
+        await patchDb(
+            "universal/currentChallenge",
+            patch
+        )
+
+        return {
             weeklyChallengeCycleIndex: 0,
             weeklyChallengeEndUnixMilliseconds:
                 currentWeekEndMs,
             weeklyChallengePatternName:
-                DEFAULT_UNIVERSAL.weeklyChallengePatternName
+                displayPatternName
         }
-
-        await patchDb(
-            "universal/currentChallenge",
-            initializedUniversal
-        )
-
-        return initializedUniversal
     }
 
     const hasValidStoredCycle =
@@ -518,6 +525,10 @@ export async function getUniversalSnapshot() {
                 ? storedCycleIndex + 1
                 : storedCycleIndex
             : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex
+    const finalCycleIndex =
+        shouldNormalizeMigratedCycle
+            ? 1
+            : rolledCycleIndex
     const shouldNormalizeEndToUtcWeek =
         hasValidStoredEnd &&
         storedEndUnixMs !== currentWeekEndMs
@@ -530,29 +541,78 @@ export async function getUniversalSnapshot() {
         snapshot.weeklyChallengePatternName ===
             undefined
 
+    const storedLeaderboardCycle = Number(
+        snapshot?.leaderboardCycleIndex ??
+            snapshot?.leaderboardMeta
+                ?.cycleIndex ??
+            -1
+    )
+    const expectedPatternName =
+        getWeeklyPatternNameForCycle(
+            finalCycleIndex
+        )
+    const storedPatternName = String(
+        snapshot?.weeklyChallengePatternName ??
+            ""
+    ).trim()
+    const shouldSyncPatternToCycle =
+        storedPatternName !==
+        expectedPatternName
+    const shouldSyncLeaderboardToWeekly =
+        Number.isFinite(
+            storedLeaderboardCycle
+        ) &&
+        storedLeaderboardCycle >= 0 &&
+        storedLeaderboardCycle !==
+            finalCycleIndex
+
+    const shouldClearLeaderboard =
+        shouldRollToCurrentWeek ||
+        shouldNormalizeMigratedCycle ||
+        shouldSyncLeaderboardToWeekly
+
     if (
         shouldRollToCurrentWeek ||
         shouldNormalizeEndToUtcWeek ||
         shouldNormalizeMigratedCycle ||
-        shouldBackfillFields
+        shouldBackfillFields ||
+        shouldSyncPatternToCycle ||
+        shouldSyncLeaderboardToWeekly
     ) {
-        const patchedUniversal = {
-            weeklyChallengeCycleIndex:
-                shouldNormalizeMigratedCycle
-                    ? 1
-                    : rolledCycleIndex,
-            weeklyChallengeEndUnixMilliseconds:
+        const previousVersion = Number(
+            snapshot?.leaderboardMeta
+                ?.version ?? 0
+        )
+        const { patch, displayPatternName } =
+            buildUniversalChallengeDbPatch(
+                finalCycleIndex,
                 currentWeekEndMs,
-            weeklyChallengePatternName
-        }
+                {
+                    clearLeaderboard:
+                        shouldClearLeaderboard,
+                    previousVersion
+                }
+            )
 
         await patchDb(
             "universal/currentChallenge",
-            patchedUniversal
+            patch
         )
 
-        return patchedUniversal
+        return {
+            weeklyChallengeCycleIndex:
+                finalCycleIndex,
+            weeklyChallengeEndUnixMilliseconds:
+                currentWeekEndMs,
+            weeklyChallengePatternName:
+                displayPatternName
+        }
     }
+
+    const resolved =
+        resolveChallengeCycleAndPattern(
+            snapshot
+        )
 
     return {
         weeklyChallengeCycleIndex:
@@ -561,7 +621,8 @@ export async function getUniversalSnapshot() {
                 : DEFAULT_UNIVERSAL.weeklyChallengeCycleIndex,
         weeklyChallengeEndUnixMilliseconds:
             currentWeekEndMs,
-        weeklyChallengePatternName
+        weeklyChallengePatternName:
+            resolved.displayPatternName
     }
 }
 

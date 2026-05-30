@@ -4,6 +4,8 @@ import {
     normalizeWalletAddress
 } from "./walletAddress"
 
+import { WEEKLY_CHALLENGE_PATTERN_NAMES } from "./weekly-challenge"
+
 const TUTORIAL_COMPLETED_KEYS = [
     "tutorialCompleted",
     "TutorialCompleted",
@@ -281,7 +283,7 @@ export function normalizeIncomingSnapshot(
             weeklyChallengePatternName:
                 String(
                     universal.weeklyChallengePatternName ??
-                        "Star"
+                        WEEKLY_CHALLENGE_PATTERN_NAMES[0]
                 )
         }
     }

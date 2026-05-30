@@ -11,15 +11,45 @@ export function normalizePatternName(
     return normalized || "unknown"
 }
 
-/** Display names rotated by `weeklyChallengeCycleIndex` (Unity fallback list). */
+/**
+ * Must match Unity `ChallengeSceneController.challengePatternNames` order exactly.
+ * Index = `weeklyChallengeCycleIndex % length`.
+ */
 export const WEEKLY_CHALLENGE_PATTERN_NAMES = [
-    "Star",
+    "Cow",
     "Heart",
-    "Diamond",
-    "Moon",
+    "Leaf",
+    "Star",
+    "Octagon",
+    "Wolf",
+    "Semi-Circle",
+    "Apple",
     "Sun",
+    "Guitar pick",
+    "Arrow",
+    "Glass",
+    "Diamond",
+    "Dog",
+    "Butterfly",
     "Cloud",
-    "Tree"
+    "X",
+    "Triangle",
+    "Spades",
+    "Pentagon",
+    "Hexagon",
+    "Bat",
+    "Ninja Star",
+    "Flag",
+    "Flower",
+    "Leaf2",
+    "Plane",
+    "Human",
+    "Energy",
+    "Flame",
+    "Call",
+    "Tree",
+    "Video",
+    "Mountains"
 ] as const
 
 export function getWeeklyPatternNameForCycle(

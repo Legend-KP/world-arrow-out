@@ -27,13 +27,15 @@ import {
 import {
     buildUniversalChallengeDbPatch,
     getWeeklyPatternNameForCycle,
-    resolveChallengeCycleAndPattern
+    resolveChallengeCycleAndPattern,
+    WEEKLY_CHALLENGE_PATTERN_NAMES
 } from "./weekly-challenge"
 
 const DEFAULT_UNIVERSAL: UniversalProgress = {
     weeklyChallengeCycleIndex: 0,
     weeklyChallengeEndUnixMilliseconds: 1749254400000,
-    weeklyChallengePatternName: "Star"
+    weeklyChallengePatternName:
+        WEEKLY_CHALLENGE_PATTERN_NAMES[0]
 }
 
 const FREE_UNLOCK_HINT_REWARD = 5

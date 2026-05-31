@@ -231,6 +231,23 @@ export default function GameClient() {
         )
     }
 
+    function isPaymentCancelled(
+        error: unknown
+    ) {
+        const message =
+            error instanceof Error
+                ? error.message
+                : String(error || "")
+
+        const lower = message.toLowerCase()
+
+        return (
+            lower.includes("cancel") ||
+            lower.includes("rejected") ||
+            lower.includes("denied")
+        )
+    }
+
     function getPaymentFailureKind(
         error: unknown
     ) {
@@ -575,6 +592,14 @@ export default function GameClient() {
                     : ""
             )
         } catch (error: any) {
+            if (isPaymentCancelled(error)) {
+                sendToUnity(
+                    "OnHintPurchaseCancelled",
+                    ""
+                )
+                return
+            }
+
             sendToUnity(
                 "OnHintPurchaseFailed",
                 error?.message ||
@@ -628,6 +653,18 @@ export default function GameClient() {
                 snapshotPayload
             )
         } catch (error: any) {
+            if (isPaymentCancelled(error)) {
+                sendToUnity(
+                    "OnRevivePurchaseCancelled",
+                    ""
+                )
+                sendToUnity(
+                    "OnLivesPurchaseCancelled",
+                    ""
+                )
+                return
+            }
+
             const message =
                 error?.message ||
                 "Revive purchase failed"
@@ -699,7 +736,9 @@ export default function GameClient() {
                     "/api/leaderboard",
                     {
                         action: "get",
-                        ...payload
+                        limit: payload?.limit,
+                        walletAddress:
+                            payload?.walletAddress
                     }
                 )
 

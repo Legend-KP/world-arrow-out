@@ -63,12 +63,6 @@ export async function POST(
                     authoritative
                 )
 
-            const walletAddress =
-                body.walletAddress
-            const playerName =
-                body.playerName ||
-                "Guest"
-
             console.log(
                 "[Submit] resolved cycle/pattern",
                 {
@@ -87,7 +81,10 @@ export async function POST(
                 body.completionSeconds || 0
             )
 
-            if (!walletAddress) {
+            const rawWalletAddress =
+                body.walletAddress
+
+            if (!rawWalletAddress) {
                 return NextResponse.json(
                     {
                         success: false,
@@ -99,6 +96,18 @@ export async function POST(
                     }
                 )
             }
+
+            const walletAddress =
+                normalizeWalletAddress(
+                    rawWalletAddress
+                )
+            const userSnapshot =
+                await getOrCreateUserSnapshot(
+                    walletAddress
+                )
+            const playerName =
+                userSnapshot.username ||
+                "Player"
 
             const chancesAfterPlay =
                 typeof body.chances ===

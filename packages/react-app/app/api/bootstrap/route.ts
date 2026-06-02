@@ -34,10 +34,16 @@ export async function POST(
             normalizeWalletAddress(
                 rawWallet
             )
+        const username =
+            typeof body.username === "string" &&
+            body.username.trim()
+                ? body.username.trim()
+                : undefined
 
         const snapshot =
             await bootstrapUserSnapshot(
-                wallet
+                wallet,
+                username
             )
 
         return NextResponse.json({

@@ -45,6 +45,19 @@ const DEFAULT_CHALLENGE_CHANCES = 1
 const WEEK_MS =
     7 * 24 * 60 * 60 * 1000
 
+function normalizeResolvedUsername(
+    value?: string | null
+) {
+    if (
+        typeof value !== "string" ||
+        !value.trim()
+    ) {
+        return null
+    }
+
+    return value.trim().slice(0, 50)
+}
+
 function getCurrentUtcWeekEnd(
     nowMs: number
 ) {
@@ -629,11 +642,16 @@ export async function getUniversalSnapshot() {
 }
 
 export async function getOrCreateUserSnapshot(
-    wallet: Address | string
+    wallet: Address | string,
+    resolvedUsername?: string | null
 ) {
     const canonicalWallet =
         normalizeWalletAddress(
             wallet as string
+        )
+    const preferredUsername =
+        normalizeResolvedUsername(
+            resolvedUsername
         )
 
     const universal =
@@ -678,16 +696,22 @@ export async function getOrCreateUserSnapshot(
                 canonicalWallet,
                 universal
             )
+        const createdUser = preferredUsername
+            ? {
+                  ...user,
+                  username: preferredUsername
+              }
+            : user
 
         await writeDb(
             `users/${canonicalWallet}`,
-            buildStoredUserRecord(user)
+            buildStoredUserRecord(createdUser)
         )
         await deleteDb(
             `users/${canonicalWallet}/universal`
         )
 
-        return user
+        return createdUser
     }
 
     let user =
@@ -714,6 +738,17 @@ export async function getOrCreateUserSnapshot(
         }
     }
 
+    const shouldUpdateUsername =
+        !!preferredUsername &&
+        user.username !== preferredUsername
+
+    if (shouldUpdateUsername) {
+        user = {
+            ...user,
+            username: preferredUsername as string
+        }
+    }
+
     const hasLegacyFields =
         Object.prototype.hasOwnProperty.call(
             mergedRaw,
@@ -731,7 +766,8 @@ export async function getOrCreateUserSnapshot(
     const shouldPersist =
         keysToDelete.length > 0 ||
         hasLegacyFields ||
-        didResetChallenge
+        didResetChallenge ||
+        shouldUpdateUsername
 
     if (shouldPersist) {
         await writeDb(
@@ -837,10 +873,12 @@ export function sanitizeSnapshot(
 }
 
 export async function bootstrapUserSnapshot(
-    walletAddress: string
+    walletAddress: string,
+    resolvedUsername?: string
 ) {
     return await getOrCreateUserSnapshot(
-        walletAddress as Address
+        walletAddress as Address,
+        resolvedUsername
     )
 }
 

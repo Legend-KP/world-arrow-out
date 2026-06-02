@@ -7,7 +7,8 @@ import {
 
 import {
     authenticateWalletWithRetry,
-    getCachedWallet
+    getCachedWallet,
+    getCachedUsername
 } from "@/lib/walletAuth"
 
 import {
@@ -186,7 +187,9 @@ export default function GameClient() {
             await apiPost(
                 "/api/bootstrap",
                 {
-                    walletAddress
+                    walletAddress,
+                    username:
+                        getCachedUsername()
                 }
             )
 

@@ -40,6 +40,23 @@ export function getCachedWallet(): string | null {
     }
 }
 
+export function getCachedUsername(): string | null {
+    const rawUsername = (
+        MiniKit.user as
+            | { username?: string }
+            | undefined
+    )?.username
+
+    if (
+        typeof rawUsername !== "string" ||
+        !rawUsername.trim()
+    ) {
+        return null
+    }
+
+    return rawUsername.trim()
+}
+
 export function setCachedWallet(
     address: string
 ) {
